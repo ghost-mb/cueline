@@ -327,7 +327,16 @@ function renderFollowInbox(body, id) {
       await api(`/api/follows/${f.id}`, { method: "PATCH", body: { auto_add: on } });
       toast(on ? "New items will be added as sources automatically." : "New items will wait in the inbox for you.");
       reload(["sources"]);
-    }));
+    }),
+    f.kind.startsWith("youtube") ? switchRow("Transcribe videos without captions",
+      "On this computer, so their summary uses what is said, not just the description. Uses your CPU for a few minutes per video.",
+      f.transcribe_audio, async on => {
+        try {
+          await api(`/api/follows/${f.id}`, { method: "PATCH", body: { transcribe_audio: on } });
+          toast(on ? "New videos without captions will be transcribed." : "Videos without captions will use their description.");
+        } catch (e) { toast(e.message, 6000); }
+        reload(["sources"]);
+      }) : "");
   const list = el("div", { class: "inbox-list" });
   body.append(list);
   // The cached list is painted right away (before swapPanel attaches the panel), so the scroll position can be kept.

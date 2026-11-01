@@ -25,6 +25,13 @@ audio = [
     "numpy",
 ]
 
+# Read scanned PDFs on this computer (~130 MB)
+ocr = [
+    "rapidocr>=3",
+    "onnxruntime",
+    "pypdfium2",
+]
+
 [project.scripts]
 cueline = "cueline.cli:main"
 

@@ -14,7 +14,7 @@ Use `CUELINE_DATA=/tmp/cueline-dev` to keep a separate library while you work.
 ## Before you open a pull request
 
 ```bash
-uv run --extra audio python -m unittest discover -s tests   # unit tests: AI, voices and network are mocked
+uv run --extra audio --extra ocr python -m unittest discover -s tests   # unit tests: AI, voices and network are mocked
 python3 tools/fresh_install_check.py                        # installs like a new user, runs every flow on a fake AI
 ```
 

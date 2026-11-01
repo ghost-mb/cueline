@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Linux: run Cueline from this checkout in the background as a transient systemd user job named "cueline"
 # (no unit file written; gone after stop or reboot). Settings: optional ~/.cueline/local.env (KEY=value lines,
-# e.g. CUELINE_AUDIO=1 to include the audio extra, CUELINE_PORT, CUELINE_ACTIVITY_LOG).
+# e.g. CUELINE_EXTRAS="audio ocr" for the add-ons, CUELINE_PORT, CUELINE_ACTIVITY_LOG).
 #   cuelinectl start | stop | restart | status | logs
 set -uo pipefail
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -33,7 +33,7 @@ case "${1:-start}" in
     systemd-run --user --unit="$UNIT" --collect --quiet \
       --working-directory="$DIR" --setenv=PATH="$PATH" --setenv=HOME="$HOME" \
       $([ -f "$ENVFILE" ] && echo "--property=EnvironmentFile=$ENVFILE") \
-      "$UV" run --project "$DIR" $([ "${CUELINE_AUDIO:-}" = 1 ] && echo --extra audio) cueline --port "$PORT" || { echo "Could not start Cueline (systemd-run failed)."; exit 1; }
+      "$UV" run --project "$DIR" $(for x in ${CUELINE_EXTRAS:-}; do printf -- "--extra %s " "$x"; done) cueline --port "$PORT" || { echo "Could not start Cueline (systemd-run failed)."; exit 1; }
     if wait_up; then echo "Cueline started: $URL"; ai_line
     else echo "Cueline did not answer within 30 s. Last log lines:"; journalctl --user -u "$UNIT" -n 20 --no-pager; exit 1; fi
     ;;

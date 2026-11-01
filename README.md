@@ -63,10 +63,11 @@ Open **http://127.0.0.1:8790**. On first start Cueline asks which AI to use:
 | **Claude, OpenAI, Gemini, OpenRouter** | Paste an API key in the app. It is stored only on your computer. |
 | **A local model** | [Ollama](https://ollama.com) or [LM Studio](https://lmstudio.ai) running on your computer. Nothing leaves your machine. Small models write weaker drafts than the big cloud ones. |
 
-Podcasts and audio transcription run on your computer too. Add them with the `audio` extra (+~400 MB):
+Two optional add-ons also run on your computer: `audio` for podcasts and transcription (+~400 MB), `ocr` for
+scanned PDFs (+~130 MB). Pick one or both:
 
 ```bash
-uv tool install --force "cueline[audio] @ git+https://github.com/ghost-mb/cueline"
+uv tool install --force "cueline[audio,ocr] @ git+https://github.com/ghost-mb/cueline"
 ```
 
 ## What's inside
@@ -77,7 +78,7 @@ uv tool install --force "cueline[audio] @ git+https://github.com/ghost-mb/cuelin
 
 | | |
 |---|---|
-| **Sources** | YouTube videos (captions, or the audio transcribed locally when there are none), web pages and blog posts, PDF/DOCX/TXT/MD, audio files and podcast episodes (transcribed locally), pasted text, other notebooks |
+| **Sources** | YouTube videos (captions, or the audio transcribed locally when there are none), web pages and blog posts, PDF (scanned pages too, with `ocr`)/DOCX/TXT/MD, audio files and podcast episodes (transcribed locally), pasted text, other notebooks |
 | **Live sources** | YouTube channels, playlists and searches, RSS/Atom blogs, newsletters, podcasts. Checked every 6 hours. |
 | **Chat** | Streaming answers grounded only in your sources, with clickable citations that open the exact passage or moment |
 | **Studio** | Content creation (8 formats × 5 tones, fact check under each piece), landing page, slide deck, podcast, infographic, report, mind map, flashcards, quiz, skill, brand kit. Refine any output by chat; versions are kept. |
@@ -114,7 +115,7 @@ Environment variables, all optional:
 | `CUELINE_WATCH_HOURS` | `6` | How often live sources are checked |
 | `CUELINE_FEED_DAILY_CAP` | `30` | New items the AI reads per day |
 | `CUELINE_AUTO_ADD_DAILY_CAP` | `10` | Items auto-added as sources per day |
-| `CUELINE_STT_MODEL` | `base` | Local speech-to-text model (faster-whisper) |
+| `CUELINE_STT_MODEL` | `base` | Speech model when none is picked in the app (`base` = Fast, `small` = Accurate) |
 | `CUELINE_VOICE_SPEED` | `1.2` | Podcast voice speed (local voices) |
 | `CUELINE_CLAUDE_SKILLS_DIR` / `CUELINE_CODEX_SKILLS_DIR` | `~/.claude/skills` / `~/.codex/skills` | Where skills install |
 | `CUELINE_CODEX_BIN` | `codex` | Path to the Codex CLI |
@@ -150,11 +151,12 @@ the AI you picked (none if you use a local model), and Cueline fetches the video
 
 ## Limits
 
-- **Scanned PDFs** (images of text) can't be read: there's no OCR.
-- **Updates inbox:** new videos without captions get no AI summary there. Added to a notebook, they're transcribed
-  on your computer (with the `audio` extra).
-- **Local transcription** uses a small, fast speech model that sometimes mishears words.
-  `CUELINE_STT_MODEL=small` is more accurate but slower.
+- **Scanned PDFs:** up to 30 scanned pages per PDF are read (split longer ones). Handwriting and poor scans may come
+  out garbled.
+- **Local transcription** sometimes mishears words, names especially. Pick **Accurate** under AI model → Speech to
+  text for fewer mistakes (about 3 times slower).
+- **Updates inbox:** new videos without captions are summarised from their description, unless you switch on
+  "Transcribe videos without captions" for that channel.
 - **Very large notebooks** (over ~360k characters of sources) use keyword search to pick passages, so an answer can
   miss a passage that uses different words.
 - **Speed and usage** come from your AI plan or key: chat answers take 2-10 seconds, Studio outputs 1-2 minutes.

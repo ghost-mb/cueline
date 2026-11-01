@@ -140,20 +140,45 @@ def triaged_today() -> int:
 
 
 def read_text(item: dict) -> tuple[str, dict]:
-    """Full text for an update: transcript / article / show notes. Videos without captions fall back to the
-    description (meta.transcript = False) so the item isn't lost."""
+    """Full text for an update: transcript / article / show notes. Videos without captions are transcribed locally
+    when their live source allows it (follows.transcribe_audio), else fall back to the description
+    (meta.transcript = False) so the item isn't lost."""
     meta = item.get("meta") or {}
     try:
         return feeds.full_text(item)
     except Exception as exc:
         if item["kind"] != "youtube":
             raise
+        follow = db.one("SELECT transcribe_audio FROM follows WHERE id = ?", (item["follow_id"],)) or {}
+        if follow.get("transcribe_audio") and isinstance(exc, youtube.NoTranscript) and _audio_ready():
+            return _transcribe_video(exc.video)
         details = youtube.fetch_metadata(meta.get("video_id") or youtube.parse_video_id(item["url"]))
         if len((details["description"] or "").strip()) < 200:
             raise ValueError(f"No transcript and no useful description ({str(exc)[:120]}).") from exc
         return details["description"], {"channel": details["channel"], "duration_s": details["duration_s"],
                                          "upload_date": details["upload_date"], "thumbnail": details["thumbnail"],
                                          "transcript": False}
+
+
+def _audio_ready() -> bool:
+    import importlib.util
+    return importlib.util.find_spec("faster_whisper") is not None  # the audio extra may have been removed since
+
+
+def _transcribe_video(video: dict) -> tuple[str, dict]:
+    import shutil
+    import tempfile
+    from pathlib import Path
+    from . import stt
+    if (video["duration_s"] or 0) > stt.MAX_SECONDS:
+        raise ValueError("No captions, and longer than 4 hours: too long to transcribe.")
+    folder = Path(tempfile.mkdtemp(prefix="yt-", dir=db.DATA_DIR))
+    try:
+        text, _ = stt.transcribe(str(stt.youtube_audio(video["video_id"], folder)))
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+    return text, {"channel": video["channel"], "duration_s": video["duration_s"], "upload_date": video["upload_date"],
+                  "thumbnail": video["thumbnail"], "stt_model": stt.model_name()}
 
 
 def fill_text(update_id: str) -> dict:

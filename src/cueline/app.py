@@ -798,6 +798,13 @@ def update_follow(follow_id):
             fields.update(fail_count=0, last_error=None)
     if "auto_add" in body:
         fields["auto_add"] = 1 if body["auto_add"] else 0
+    if "transcribe_audio" in body:
+        if body["transcribe_audio"]:
+            try:
+                stt.need_audio("faster_whisper")
+            except ValueError as exc:
+                return err(str(exc))
+        fields["transcribe_audio"] = 1 if body["transcribe_audio"] else 0
     if body.get("title"):
         fields["title"] = str(body["title"]).strip()[:200]
     return jsonify(db.update("follows", follow_id, **fields))
@@ -879,7 +886,8 @@ def add_update(update_id):
 
 @app.get("/api/settings")
 def get_settings():
-    return jsonify({"updates_ai": watch.ai_mode(), "daily_cap": watch.DAILY_CAP, "interval_hours": watch.INTERVAL_HOURS})
+    return jsonify({"updates_ai": watch.ai_mode(), "daily_cap": watch.DAILY_CAP, "interval_hours": watch.INTERVAL_HOURS,
+                    "stt_model": stt.model_name(), "stt_models": stt.MODELS})
 
 
 @app.put("/api/settings")
@@ -889,6 +897,10 @@ def save_settings():
         if body["updates_ai"] not in watch.AI_MODES:
             return err("Unknown AI mode")
         db.set_setting("updates_ai", body["updates_ai"])
+    if "stt_model" in body:
+        if body["stt_model"] not in stt.MODELS:
+            return err("Unknown speech model")
+        db.set_setting("stt_model", body["stt_model"])
     return get_settings()
 
 

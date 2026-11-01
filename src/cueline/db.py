@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS follows (
     id TEXT PRIMARY KEY, notebook_id TEXT NOT NULL REFERENCES notebooks(id) ON DELETE CASCADE,
     kind TEXT NOT NULL, url TEXT NOT NULL, feed_url TEXT NOT NULL, title TEXT NOT NULL, meta TEXT,
     enabled INTEGER NOT NULL DEFAULT 1, auto_add INTEGER NOT NULL DEFAULT 0, last_checked_at TEXT, last_error TEXT,
-    fail_count INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL
+    fail_count INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, transcribe_audio INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS updates (
     id TEXT PRIMARY KEY, follow_id TEXT NOT NULL REFERENCES follows(id) ON DELETE CASCADE,

@@ -4,12 +4,16 @@ Content keeps location markers the chat can cite: `### [m:ss]` for videos, `[p.N
 """
 import io
 import re
+import threading
 from pathlib import Path
 
 from . import youtube
 
 HERMES_RAW_DIR = Path.home() / ".youtube_learner" / "raw"  # read-only import
 MAX_UPLOAD_BYTES = 30 * 1024 * 1024
+OCR_MAX_PAGES = 30  # scanned pages read per PDF (each takes a few seconds on a CPU)
+OCR_HINT = ("Scanned pages need Cueline's OCR add-on (reads text from images on this computer). Install it with: "
+            "uv tool install --force 'cueline[ocr] @ git+https://github.com/ghost-mb/cueline'")
 TEXT_EXTENSIONS = {".txt", ".md", ".markdown", ".csv", ".json", ".html", ".htm"}
 
 
@@ -112,20 +116,66 @@ def from_file(filename: str, data: bytes) -> dict:
         raise ValueError(f"Cueline can't read {ext or 'this'} files yet. Try PDF, DOCX, TXT or MD.")
     content = content.strip()
     if not content:
-        raise ValueError("No readable text found in that file (scanned PDFs need OCR, which isn't supported yet).")
+        hint = f" {OCR_HINT}" if kind == "pdf" and not _ocr_ready() else ""
+        raise ValueError(f"No readable text found in that file.{hint}")
     return {"kind": kind, "title": title, "url": None, "content": content, "word_count": _words(content), "meta": meta}
 
 
 def _pdf_text(data: bytes) -> tuple[str, int]:
+    """Text per page with [p.N] markers. Pages without a text layer (scans) are read with OCR when installed."""
     from pypdf import PdfReader
 
     reader = PdfReader(io.BytesIO(data))
-    parts = []
+    parts, scanned = {}, []
     for i, page in enumerate(reader.pages, start=1):
         text = (page.extract_text() or "").strip()
         if text:
-            parts.append(f"[p.{i}]\n{text}")
-    return "\n\n".join(parts), len(reader.pages)
+            parts[i] = text
+        else:
+            scanned.append(i)
+    if scanned and _ocr_ready():
+        parts.update(_ocr_pages(data, scanned[:OCR_MAX_PAGES]))
+        if len(scanned) > OCR_MAX_PAGES:
+            parts[scanned[OCR_MAX_PAGES]] = (f"[Only the first {OCR_MAX_PAGES} scanned pages were read. "
+                                             "Split the PDF to add the rest.]")
+    return "\n\n".join(f"[p.{i}]\n{parts[i]}" for i in sorted(parts)), len(reader.pages)
+
+
+def _ocr_ready() -> bool:
+    import importlib.util
+    return all(importlib.util.find_spec(m) for m in ("rapidocr", "pypdfium2", "onnxruntime"))
+
+
+_ocr_engine = None
+_ocr_lock = threading.Lock()  # one OCR job at a time: shared engine, and it saturates the CPU anyway
+
+
+def _ocr_pages(data: bytes, pages: list[int]) -> dict[int, str]:
+    """OCR the given 1-based pages on this computer (rapidocr). Returns {page: text} for pages with any text."""
+    with _ocr_lock:
+        return _ocr_locked(data, pages)
+
+
+def _ocr_locked(data: bytes, pages: list[int]) -> dict[int, str]:
+    global _ocr_engine
+    import numpy as np
+    import pypdfium2 as pdfium
+    from rapidocr import RapidOCR
+    if _ocr_engine is None:
+        import logging
+        logging.getLogger("RapidOCR").setLevel(logging.WARNING)  # it logs several INFO lines per page
+        _ocr_engine = RapidOCR()
+    pdf = pdfium.PdfDocument(data)
+    out = {}
+    try:
+        for n in pages:
+            image = pdf[n - 1].render(scale=2).to_pil().convert("RGB")  # ~150 dpi for a typical scan
+            lines = _ocr_engine(np.array(image)).txts or ()
+            if lines:
+                out[n] = "\n".join(lines)
+    finally:
+        pdf.close()
+    return out
 
 
 def _docx_text(data: bytes) -> str:

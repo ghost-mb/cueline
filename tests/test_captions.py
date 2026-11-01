@@ -61,3 +61,43 @@ class Fallback(unittest.TestCase):
         self.assertEqual(done["content"], "### [0:00]\nHello world.")
         self.assertEqual(done["meta"]["stt"], "done")
         self.assertFalse(seen["folder"].exists())  # temp audio removed
+
+
+class Updates(unittest.TestCase):
+    """New videos from a followed channel that have no captions."""
+    def setUp(self):
+        _db.fresh()
+        nb = db.insert("notebooks", title="T", created_at=db.now(), updated_at=db.now())
+        self.follow = db.insert("follows", notebook_id=nb["id"], kind="youtube_channel", url="u", feed_url="f",
+                                title="Chan", created_at=db.now())
+        self.item = {"kind": "youtube", "url": VIDEO["url"], "follow_id": self.follow["id"], "meta": {}}
+
+    def read(self):
+        from cueline import feeds, watch
+        details = {**VIDEO, "description": "A long enough description of the video. " * 10}
+        with mock.patch.object(feeds, "full_text", no_captions), \
+                mock.patch.object(youtube, "fetch_metadata", return_value=details), \
+                mock.patch.object(stt, "youtube_audio", side_effect=lambda vid, folder: Path(folder) / "a.m4a"), \
+                mock.patch.object(stt, "transcribe", return_value=("### [0:00]\nSpoken words.", 60.0)):
+            return watch.read_text(self.item)
+
+    def test_switch_off_uses_the_description(self):
+        text, meta = self.read()
+        self.assertIn("long enough description", text)
+        self.assertFalse(meta["transcript"])
+
+    def test_switch_on_transcribes_the_audio(self):
+        db.update("follows", self.follow["id"], transcribe_audio=1)
+        text, meta = self.read()
+        self.assertEqual(text, "### [0:00]\nSpoken words.")
+        self.assertEqual(meta["channel"], "Chan")
+
+
+class SpeechModel(unittest.TestCase):
+    def test_choice_is_saved_and_checked(self):
+        from cueline import app
+        _db.fresh()
+        c, h = app.app.test_client(), {"X-Cueline": "1"}
+        self.assertEqual(c.put("/api/settings", json={"stt_model": "small"}, headers=h).get_json()["stt_model"], "small")
+        self.assertEqual(stt.model_name(), "small")
+        self.assertEqual(c.put("/api/settings", json={"stt_model": "huge"}, headers=h).status_code, 400)

@@ -105,13 +105,23 @@ export async function openAiSettings(onSaved, firstRun = false) {
   };
   const images = mediaRow("/api/ai/images", "Images (AI-image infographics)", "Image engine");
   const voices = mediaRow("/api/ai/voices", "Podcast voices", "Voice engine");
+  // Local speech-to-text (audio uploads, podcasts, videos without captions): runs on this computer, no AI quota.
+  const speech = el("div", { class: "field" });
+  api("/api/settings").then(s => {
+    const select = el("select", { "aria-label": "Speech-to-text model", onchange: async () => {
+      try { await api("/api/settings", { method: "PUT", body: { stt_model: select.value } }); toast("Speech to text saved."); }
+      catch (e) { toast(e.message || "Could not save"); }
+    } }, ...Object.entries(s.stt_models).map(([id, label]) => el("option", { value: id, selected: id === s.stt_model }, label)));
+    speech.append(el("span", { class: "field-label" }, "Speech to text"), select,
+      el("p", { class: "muted small" }, "Runs on this computer. Accurate makes fewer mistakes but takes about 3 times longer."));
+  }).catch(() => speech.remove());
 
   paint();
   const m = modal({
     title: firstRun ? "Pick your AI" : "AI model", iconNode: icon("sparkles"),
     body: [el("p", { class: "muted", style: { marginTop: "0" } }, firstRun
       ? "Cueline needs an AI to read your sources and write. Paste an API key (Claude, OpenAI, Gemini or OpenRouter), or pick ChatGPT if the Codex CLI is installed and logged in (codex login)."
-      : "Choose what writes Cueline's answers, Studio outputs and update summaries."), group, detail, images, voices],
+      : "Choose what writes Cueline's answers, Studio outputs and update summaries."), group, detail, images, voices, speech],
     foot: [el("button", { class: "btn ghost", onclick: () => m.close() }, "Cancel"), saveBtn],
   });
 }

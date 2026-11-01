@@ -22,7 +22,7 @@ from . import feeds
 
 log = logging.getLogger("cueline.stt")
 
-MODEL = os.environ.get("CUELINE_STT_MODEL", "base")  # ~150 MB, downloaded once into the Hugging Face cache
+MODELS = {"base": "Fast", "small": "Accurate (slower)"}  # faster-whisper sizes, downloaded once (~150 / ~480 MB)
 MAX_AUDIO_BYTES = 400 * 1024 * 1024
 MAX_SECONDS = 4 * 3600
 MARK_EVERY = 60  # seconds between ### [m:ss] markers
@@ -30,8 +30,9 @@ AUDIO_EXTENSIONS = {".mp3", ".m4a", ".wav", ".ogg", ".opus", ".flac", ".webm", "
 AUDIO_DIR = db.DATA_DIR / "audio"  # uploaded audio waits here until it is transcribed, then is deleted
 
 _jobs: q.Queue = q.Queue()
-_model = None
+_model = (None, None)  # (name, WhisperModel): one model in memory at a time
 _model_lock = threading.Lock()
+_run_lock = threading.Lock()  # one transcription at a time (uploads and live sources share the CPU)
 on_done = None  # set by app: refresh the source guide after a transcript lands (= watch.on_source_added)
 AUDIO_HINT = ("This needs Cueline's audio add-on (speech-to-text and podcast voices on this computer). "
               "Install it with: uv tool install --force 'cueline[audio] @ git+https://github.com/ghost-mb/cueline' "
@@ -49,17 +50,29 @@ def _stamp(seconds: float) -> str:
     return f"{s // 3600}:{s % 3600 // 60:02d}:{s % 60:02d}" if s >= 3600 else f"{s // 60}:{s % 60:02d}"
 
 
+def model_name() -> str:
+    """The speech model picked in the app (AI model dialog), else CUELINE_STT_MODEL, else the fast one."""
+    return db.setting("stt_model", "") or os.environ.get("CUELINE_STT_MODEL", "base")
+
+
 def _get_model():
     global _model
+    name = model_name()
     with _model_lock:
-        if _model is None:
+        if _model[0] != name:
             from faster_whisper import WhisperModel
-            _model = WhisperModel(MODEL, device="cpu", compute_type="int8", cpu_threads=max(1, (os.cpu_count() or 2) // 2))
-        return _model
+            _model = (name, WhisperModel(name, device="cpu", compute_type="int8",
+                                         cpu_threads=max(1, (os.cpu_count() or 2) // 2)))
+        return _model[1]
 
 
 def transcribe(path: str) -> tuple[str, float]:
     """Returns (markdown with ### [m:ss] sections, duration in seconds)."""
+    with _run_lock:
+        return _transcribe(path)
+
+
+def _transcribe(path: str) -> tuple[str, float]:
     segments, info = _get_model().transcribe(path, vad_filter=True, beam_size=1)
     if info.duration > MAX_SECONDS:
         raise ValueError("That episode is longer than 4 hours.")
@@ -156,7 +169,7 @@ def _run(src_id: str):
             old.split("## Transcript")[0].replace("## Show notes", "", 1) if "## Transcript" in old else old).strip()
         content = f"## Show notes\n{notes}\n\n## Transcript\n\n{text}" if notes else text
         db.update("sources", src_id, content=content, word_count=len(content.split()),
-                  meta={**meta, "stt": "done", "stt_error": None, "stt_model": MODEL, "duration_s": int(duration)})
+                  meta={**meta, "stt": "done", "stt_error": None, "stt_model": model_name(), "duration_s": int(duration)})
         if meta.get("audio_file"):
             path.unlink(missing_ok=True)
             db.update("sources", src_id, meta={**db.one("SELECT meta FROM sources WHERE id = ?", (src_id,))["meta"],
