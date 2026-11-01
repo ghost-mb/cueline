@@ -17,14 +17,31 @@ def _words(text: str) -> int:
     return len(text.split())
 
 
+AUDIO_PENDING = "(No captions: transcribing the audio on this computer. The transcript appears here when it is ready.)"
+
+
 def from_youtube(url: str) -> dict:
-    v = youtube.extract(url)
+    """A YouTube video as a source. Without readable captions it falls back to transcribing the audio locally:
+    the record then has meta.youtube_audio and placeholder content, and the caller must stt.queue() it."""
+    from . import stt
+    extra = {}
+    try:
+        v = youtube.extract(url)
+        content, words = v["transcript_md"], v["word_count"]
+    except youtube.NoTranscript as exc:
+        v = exc.video
+        try:
+            stt.need_audio("faster_whisper", "yt_dlp")
+        except ValueError:
+            raise ValueError(f"{exc} {stt.AUDIO_HINT.replace('This needs', 'To transcribe its audio instead, add')}")
+        if (v["duration_s"] or 0) > stt.MAX_SECONDS:
+            raise ValueError(f"{exc} It is also longer than 4 hours, too long to transcribe.")
+        content, words, extra = AUDIO_PENDING, 0, {"youtube_audio": True}
     return {
-        "kind": "youtube", "title": v["title"], "url": v["url"], "content": v["transcript_md"],
-        "word_count": v["word_count"],
+        "kind": "youtube", "title": v["title"], "url": v["url"], "content": content, "word_count": words,
         "meta": {"video_id": v["video_id"], "channel": v["channel"], "duration_s": v["duration_s"],
                  "upload_date": v["upload_date"], "thumbnail": v["thumbnail"],
-                 "description": (v["description"] or "")[:3000]},
+                 "description": (v["description"] or "")[:3000], **extra},
     }
 
 

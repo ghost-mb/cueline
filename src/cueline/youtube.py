@@ -108,6 +108,13 @@ def transcript_markdown(groups: list[dict]) -> str:
     return "\n".join(lines).strip()
 
 
+class NoTranscript(RuntimeError):
+    """No readable captions. .video holds everything else extract() returns (no transcript)."""
+    def __init__(self, msg: str, video: dict):
+        super().__init__(msg)
+        self.video = video
+
+
 def extract(value: str) -> dict:
     """Fetch everything the app stores for one video. Raises with a readable message."""
     video_id = parse_video_id(value)
@@ -115,22 +122,15 @@ def extract(value: str) -> dict:
         meta = fetch_metadata(video_id)
     except Exception as exc:
         raise RuntimeError(f"Couldn't read the video's details (private, removed, or no network?): {exc}") from exc
+    video = {"video_id": video_id, "url": f"https://www.youtube.com/watch?v={video_id}", "title": meta["title"],
+             "channel": meta["channel"], "duration_s": meta["duration_s"], "upload_date": meta["upload_date"],
+             "description": meta["description"], "thumbnail": meta["thumbnail"]}
     try:
         segments = fetch_transcript(video_id)
     except Exception as exc:  # captions disabled, IP block, etc.
-        raise RuntimeError(f"This video has no transcript we can read ({type(exc).__name__}).") from exc
+        raise NoTranscript(f"This video has no transcript we can read ({type(exc).__name__}).", video) from exc
     if not segments:
-        raise RuntimeError("The transcript came back empty.")
+        raise NoTranscript("The transcript came back empty.", video)
     groups = group_transcript(segments, meta["chapters"])
-    return {
-        "video_id": video_id,
-        "url": f"https://www.youtube.com/watch?v={video_id}",
-        "title": meta["title"],
-        "channel": meta["channel"],
-        "duration_s": meta["duration_s"],
-        "upload_date": meta["upload_date"],
-        "description": meta["description"],
-        "thumbnail": meta["thumbnail"],
-        "transcript_md": transcript_markdown(groups),
-        "word_count": sum(len(s["text"].split()) for s in segments),
-    }
+    return {**video, "transcript_md": transcript_markdown(groups),
+            "word_count": sum(len(s["text"].split()) for s in segments)}

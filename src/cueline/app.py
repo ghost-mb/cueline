@@ -156,7 +156,10 @@ def delete_notebook(nb_id):
 def _add_source(nb_id: str, record: dict):
     src = db.insert("sources", notebook_id=nb_id, created_at=db.now(), enabled=1, **record)
     db.touch_notebook(nb_id)
-    threading.Thread(target=_guides, args=(nb_id, src["id"]), daemon=True).start()
+    if (src["meta"] or {}).get("youtube_audio"):
+        src = stt.queue(src["id"])  # guides run when the transcript lands (stt.on_done)
+    else:
+        threading.Thread(target=_guides, args=(nb_id, src["id"]), daemon=True).start()
     src.pop("content", None)
     return jsonify(src), 201
 
@@ -283,7 +286,10 @@ def _batch_worker(job: dict):
                 src = db.insert("sources", notebook_id=nb_id, created_at=db.now(), enabled=1, **record)
                 db.touch_notebook(nb_id)
                 it["state"] = "added"
-                _guides(nb_id, src["id"], refresh=False)  # waits for the guide: spaces out the AI calls too
+                if (src["meta"] or {}).get("youtube_audio"):
+                    stt.queue(src["id"])  # no captions: transcribed locally, guides follow
+                else:
+                    _guides(nb_id, src["id"], refresh=False)  # waits for the guide: spaces out the AI calls too
                 break
             except Exception as exc:
                 msg = str(exc)
@@ -1083,6 +1089,12 @@ def startup():
 
 
 def serve(port: int = 8790):
+    import logging
+    from flask import cli
+    # Werkzeug's "development server" warning targets public deployments; Cueline only listens on 127.0.0.1.
+    # This also drops one log line per request (the UI polls every 8 s). Our own warnings still show.
+    logging.getLogger("werkzeug").setLevel(logging.ERROR)
+    cli.show_server_banner = lambda *args, **kwargs: None
     startup()
-    print(f"Cueline running: http://127.0.0.1:{port}")
+    print(f"Cueline running: http://127.0.0.1:{port}  (Ctrl+C to stop)", flush=True)
     app.run(host="127.0.0.1", port=port, debug=False, threaded=True)

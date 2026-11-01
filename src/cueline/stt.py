@@ -10,6 +10,7 @@ import importlib.util
 import logging
 import os
 import queue as q
+import shutil
 import tempfile
 import threading
 import urllib.error
@@ -95,9 +96,22 @@ def download(url: str, dest: Path) -> None:
         raise ValueError(f"Couldn't download the audio ({exc.reason}).") from exc
 
 
+def youtube_audio(video_id: str, folder: Path) -> Path:
+    """Download a YouTube video's audio track (no video) into folder; returns the file."""
+    import yt_dlp
+    opts = {"format": "bestaudio[ext=m4a]/bestaudio", "outtmpl": str(folder / "%(id)s.%(ext)s"), "quiet": True,
+            "no_warnings": True, "noprogress": True, "noplaylist": True, "max_filesize": MAX_AUDIO_BYTES}
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        ydl.download([f"https://www.youtube.com/watch?v={video_id}"])
+    files = [p for p in folder.iterdir() if not p.name.endswith(".part")]
+    if not files:
+        raise ValueError("YouTube didn't send the audio (too large, or the download was blocked).")
+    return files[0]
+
+
 def can_transcribe(src: dict) -> bool:
     meta = src.get("meta") or {}
-    return bool(meta.get("audio") or meta.get("audio_file"))
+    return bool(meta.get("audio") or meta.get("audio_file") or meta.get("youtube_audio"))
 
 
 def _set(src_id: str, **meta_changes):
@@ -124,10 +138,13 @@ def _run(src_id: str):
         return
     meta = src["meta"] or {}
     _set(src_id, stt="running")
-    tmp = None
+    tmp = tmpdir = None
     try:
         if meta.get("audio_file"):
             path = AUDIO_DIR / Path(meta["audio_file"]).name
+        elif meta.get("youtube_audio"):
+            tmpdir = Path(tempfile.mkdtemp(prefix="yt-", dir=db.DATA_DIR))
+            path = youtube_audio(meta["video_id"], tmpdir)
         else:
             fd, tmp = tempfile.mkstemp(suffix=".audio", dir=db.DATA_DIR)
             os.close(fd)
@@ -135,7 +152,7 @@ def _run(src_id: str):
             path = Path(tmp)
         text, duration = transcribe(str(path))
         old = src["content"] or ""
-        notes = "" if meta.get("audio_file") else (
+        notes = "" if meta.get("audio_file") or meta.get("youtube_audio") else (
             old.split("## Transcript")[0].replace("## Show notes", "", 1) if "## Transcript" in old else old).strip()
         content = f"## Show notes\n{notes}\n\n## Transcript\n\n{text}" if notes else text
         db.update("sources", src_id, content=content, word_count=len(content.split()),
@@ -152,6 +169,8 @@ def _run(src_id: str):
     finally:
         if tmp:
             Path(tmp).unlink(missing_ok=True)
+        if tmpdir:
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 def _worker():

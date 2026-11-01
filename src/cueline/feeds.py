@@ -6,6 +6,7 @@ yt-dlp because YouTube's RSS returns 404 from this machine — plus "rss" (blogs
 No LLM calls here. Every HTTP fetch goes through `fetch()`, which only talks to public hosts.
 """
 import html
+import http.client
 import ipaddress
 import re
 import socket
@@ -28,18 +29,64 @@ MIN_ARTICLE_CHARS = 1500  # shorter feed bodies get the full page fetched
 
 
 # ---------- safe fetch ----------
-def _check_public(url: str) -> None:
-    parsed = urlparse(url)
-    if parsed.scheme not in ("http", "https") or not parsed.hostname:
-        raise ValueError("Only http(s) links are supported.")
+def _public_addrs(host: str, port: int) -> list:
     try:
-        infos = socket.getaddrinfo(parsed.hostname, parsed.port or (443 if parsed.scheme == "https" else 80))
+        infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
     except socket.gaierror as exc:
-        raise ValueError(f"Couldn't find {parsed.hostname}.") from exc
+        raise ValueError(f"Couldn't find {host}.") from exc
     for info in infos:
         ip = ipaddress.ip_address(info[4][0].split("%")[0])
         if not ip.is_global:  # localhost, LAN, link-local...: never let a feed point Cueline at this machine
             raise ValueError("That link points to a private address, which Cueline won't fetch.")
+    return infos
+
+
+def _check_public(url: str) -> None:
+    """Early, friendly check. The real guard is _safe_connect, which checks again at connect time."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise ValueError("Only http(s) links are supported.")
+    _public_addrs(parsed.hostname, parsed.port or (443 if parsed.scheme == "https" else 80))
+
+
+def _safe_connect(address, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, source_address=None, *args, **kwargs):
+    """Connect only to addresses checked in this same lookup, so DNS can't swap in a private one (DNS rebinding).
+    shortcut: an HTTP(S)_PROXY on a private address is refused too; allow-list proxies if someone needs one."""
+    host, port = address[:2]
+    err = None
+    for family, type_, proto, _, sockaddr in _public_addrs(host, port):
+        sock = socket.socket(family, type_, proto)
+        try:
+            if timeout is not socket._GLOBAL_DEFAULT_TIMEOUT:
+                sock.settimeout(timeout)
+            sock.connect(sockaddr)
+            return sock
+        except OSError as exc:
+            err = exc
+            sock.close()
+    raise err or OSError(f"Couldn't connect to {host}.")
+
+
+class _SafeHTTP(http.client.HTTPConnection):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._create_connection = _safe_connect  # set per instance: http.client sets it in __init__ too
+
+
+class _SafeHTTPS(http.client.HTTPSConnection):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._create_connection = _safe_connect  # set per instance: http.client sets it in __init__ too
+
+
+class _SafeHTTPHandler(urllib.request.HTTPHandler):
+    def http_open(self, req):
+        return self.do_open(_SafeHTTP, req)
+
+
+class _SafeHTTPSHandler(urllib.request.HTTPSHandler):
+    def https_open(self, req):
+        return self.do_open(_SafeHTTPS, req, context=self._context)
 
 
 class _SafeRedirects(urllib.request.HTTPRedirectHandler):
@@ -48,7 +95,7 @@ class _SafeRedirects(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
-_opener = urllib.request.build_opener(_SafeRedirects)
+_opener = urllib.request.build_opener(_SafeRedirects, _SafeHTTPHandler, _SafeHTTPSHandler)
 
 
 def fetch(url: str) -> tuple[bytes, str, str]:
