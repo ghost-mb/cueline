@@ -114,3 +114,13 @@ class CodexStuck(unittest.TestCase):
             eng._proc.poll() if expect_alive else eng._proc.wait(5)
             self.assertEqual(eng._proc.poll() is None, expect_alive)
         self.assertEqual(eng._pending, {})
+
+
+class SourceNames(unittest.TestCase):
+    def test_the_ai_sees_the_channel_name(self):
+        # Auto-captions misspell names ("Rosell"); the channel gives the AI the right spelling.
+        from cueline import prompts
+        block = prompts.sources_block([{"kind": "youtube", "title": "T", "content": "hi this is daniel rosell",
+                                        "meta": {"channel": 'Daniel "D" Rosehill'}}])
+        self.assertIn("channel=\"Daniel 'D' Rosehill\"", block)
+        self.assertIn("channel's spelling", prompts.CITATION_RULES)

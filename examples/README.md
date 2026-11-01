@@ -19,3 +19,17 @@ A notebook with two NASA videos (US government works, public domain):
 | [SKILL.md](hubble-webb/SKILL.md) | Studio → Skill, no instructions. Ready to install into Claude Code or Codex. |
 
 Made with the ChatGPT engine (Codex CLI). The built-in citation checker verified every citation (52 in total).
+
+## Content marketing (`content-marketing/`)
+
+One video: [In 3 Minutes: Why Every Content Marketing Strategy Should Be Embracing Format Agnostic Content](https://www.youtube.com/watch?v=bWPtxiA_tQE)
+by **Daniel Rosehill**, licensed [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). The outputs below are
+AI adaptations of his talk, not his own words.
+
+| Output | How it was made |
+|---|---|
+| [newsletter.md](content-marketing/newsletter.md) | Studio → Content creation → Newsletter, Conversational tone, *"For a newsletter read by small-business owners who do their own marketing."* |
+| [linkedin-post.md](content-marketing/linkedin-post.md) | Studio → Content creation → Social post, Storytelling tone, *"For LinkedIn, aimed at marketing agency owners."* |
+
+YouTube's automatic captions spell his name "Rosell". Cueline passes the channel name to the AI, so the drafts credit
+him correctly.

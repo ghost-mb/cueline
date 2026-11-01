@@ -14,7 +14,7 @@ Every claim links to the second it was said.</p>
 
 ![Demo: a notebook with two NASA videos, a cited answer, the source passage at 0:52, a LinkedIn post with its fact check, and a SKILL.md](.github/demo.gif)
 
-Two NASA videos in, then a cited answer, a LinkedIn post and an agent skill out. Every output is in
+Two NASA videos in, then a cited answer, a LinkedIn post and an agent skill out. More outputs (a newsletter too) are in
 [`examples/`](examples/), unedited, with timestamps you can click.
 
 ## Why Cueline
