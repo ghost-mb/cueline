@@ -110,6 +110,7 @@ def wait_studio(base, item_id, timeout=60):
 
 
 def main():
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # Windows consoles default to a legacy code page
     uv = shutil.which("uv")
     if not uv:
         sys.exit("Needs uv on PATH.")
@@ -117,7 +118,8 @@ def main():
     app_dir, home, bin_dir = work / "cueline", work / "home", work / "bin"
     for d in (home, bin_dir):
         d.mkdir()
-    (bin_dir / "uv").symlink_to(uv)
+    shutil.copy(uv, bin_dir / Path(uv).name)  # a copy: symlinks need extra rights on Windows
+    exe = ".exe" if os.name == "nt" else ""
 
     files = subprocess.run(["git", "ls-files", "-co", "--exclude-standard"], cwd=ROOT, capture_output=True,
                            text=True, check=True).stdout.split()
@@ -135,17 +137,20 @@ def main():
     ai_port, port = free_port(), free_port()
     fake = ThreadingHTTPServer(("127.0.0.1", ai_port), FakeAI)
     threading.Thread(target=fake.serve_forever, daemon=True).start()
-    env = {"HOME": str(home), "PATH": f"{bin_dir}:/usr/bin:/bin", "OPENAI_BASE_URL": f"http://127.0.0.1:{ai_port}/v1",
+    system = [os.environ.get("SystemRoot", r"C:\Windows") + r"\System32"] if os.name == "nt" else ["/usr/bin", "/bin"]
+    env = {"HOME": str(home), "USERPROFILE": str(home), "PATH": os.pathsep.join([str(bin_dir), *system]),
+           **{k: os.environ[k] for k in ("SystemRoot", "TEMP", "TMP") if k in os.environ},
+           "OPENAI_BASE_URL": f"http://127.0.0.1:{ai_port}/v1",
            "UV_CACHE_DIR": os.environ.get("UV_CACHE_DIR", str(Path.home() / ".cache" / "uv"))}
     env.update(UV_TOOL_DIR=str(work / "tools"), UV_TOOL_BIN_DIR=str(bin_dir), UV_PYTHON_INSTALL_DIR=str(work / "py"))
     log = open(work / "server.log", "w")
     started = time.time()
     inst = subprocess.run([uv, "tool", "install", "-q", str(app_dir)], env=env, capture_output=True, text=True)
-    check(inst.returncode == 0 and (bin_dir / "cueline").exists(), "uv tool install gives a `cueline` command"
+    check(inst.returncode == 0 and (bin_dir / f"cueline{exe}").exists(), "uv tool install gives a `cueline` command"
           + (f": {inst.stderr[-300:]}" if inst.returncode else ""))
     if inst.returncode:
         return
-    server = subprocess.Popen([str(bin_dir / "cueline"), "--port", str(port)], cwd=home, env=env, stdout=log, stderr=log)
+    server = subprocess.Popen([str(bin_dir / f"cueline{exe}"), "--port", str(port)], cwd=home, env=env, stdout=log, stderr=log)
     base = f"http://127.0.0.1:{port}"
     try:
         for _ in range(1200):

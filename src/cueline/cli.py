@@ -123,6 +123,7 @@ def cmd_ask(args):
 COMMANDS = {"notebooks": cmd_notebooks, "new": cmd_new, "add": cmd_add, "ask": cmd_ask}
 
 def main():
+    sys.stdout.reconfigure(errors="replace")  # titles and answers may hold characters a Windows console can't show
     args = sys.argv[1:]
     if args and args[0] in COMMANDS:
         return COMMANDS[args[0]](args[1:])

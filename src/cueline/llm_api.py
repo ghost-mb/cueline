@@ -68,6 +68,9 @@ class ApiEngine:
             if isinstance(exc, mod.APITimeoutError):
                 return "The AI took too long to answer. Try again, or use fewer sources."
             if isinstance(exc, mod.APIConnectionError):
+                if getattr(self, "provider", "") == "local":
+                    return (f"No local model server answers at {self.client.base_url}. Start Ollama or LM Studio, "
+                            "or set CUELINE_LOCAL_URL.")
                 return f"Can't reach {self.label}. Check the internet connection."
             if isinstance(exc, mod.APIStatusError):
                 return f"{self.label} error ({exc.status_code}): {_message(exc)}"
@@ -165,7 +168,8 @@ class OpenAICompatEngine(ApiEngine):
         super().__init__(key, model)
         self.provider, self.label = provider, label
         headers = {"X-Title": "Cueline"} if provider == "openrouter" else None
-        self.client = openai.OpenAI(api_key=key, base_url=base_url, max_retries=2, default_headers=headers)
+        retries = 0 if provider == "local" else 2  # a refused local connection won't fix itself in a second
+        self.client = openai.OpenAI(api_key=key, base_url=base_url, max_retries=retries, default_headers=headers)
 
     def _generate(self, system, prompt, on_delta, schema, effort, timeout):
         use_effort, use_format = True, bool(schema)

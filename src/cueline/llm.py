@@ -281,6 +281,10 @@ PROVIDERS = {
                "keys_url": "https://aistudio.google.com/apikey", "note": "Google AI Studio has a free tier"},
     "openrouter": {"label": "OpenRouter", "kind": "key", "base_url": "https://openrouter.ai/api/v1",
                    "keys_url": "https://openrouter.ai/keys", "note": "One key, many models; some are free"},
+    "local": {"label": "Local model", "kind": "local",
+              "base_url": os.environ.get("CUELINE_LOCAL_URL", "http://localhost:11434/v1"),
+              "note": "Ollama, LM Studio or any OpenAI-compatible server on this computer, so your sources never leave "
+                      "it. Set CUELINE_LOCAL_URL for a server other than Ollama (LM Studio: http://localhost:1234/v1)"},
 }
 
 
@@ -297,6 +301,8 @@ def _stored_keys() -> dict:
 
 
 def get_key(provider: str) -> str:
+    if PROVIDERS.get(provider, {}).get("kind") == "local":
+        return "local"  # local servers ignore the key, but the OpenAI client needs one
     return os.environ.get(f"CUELINE_{provider.upper()}_API_KEY") or _stored_keys().get(provider, "")
 
 

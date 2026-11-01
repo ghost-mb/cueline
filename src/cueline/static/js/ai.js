@@ -20,7 +20,7 @@ export async function openAiSettings(onSaved, firstRun = false) {
       onclick: () => { provider = p.id; paint(); },
     }, el("span", { class: "dot" }), el("span", {},
       el("strong", {}, p.label),
-      el("span", {}, p.kind === "connector" ? "Login, no key" : p.has_key ? `Key saved (…${p.key_hint})` : "Needs an API key")))));
+      el("span", {}, p.kind === "connector" ? "Login, no key" : p.kind === "local" ? "On this computer, no key" : p.has_key ? `Key saved (…${p.key_hint})` : "Needs an API key")))));
     paintDetail();
   };
 
@@ -29,7 +29,7 @@ export async function openAiSettings(onSaved, firstRun = false) {
     const parts = [];
     if (p.note) parts.push(el("p", { class: "muted small", style: { marginTop: "0" } }, p.note + "."));
     if (p.kind === "key") parts.push(keyRow(p));
-    if (p.kind === "connector" || p.has_key) parts.push(modelRow(p));
+    if (p.kind !== "key" || p.has_key) parts.push(modelRow(p));
     if (p.kind === "key") parts.push(el("p", { class: "muted small" }, `${p.label} bills your account per use. The key is stored only on this computer (data/keys.json).`));
     detail.replaceChildren(...parts);
     saveBtn.disabled = p.kind === "key" && !p.has_key;
@@ -63,7 +63,7 @@ export async function openAiSettings(onSaved, firstRun = false) {
       const cur = chosen[p.id];
       const opts = p.kind === "connector" ? [{ id: "", label: "Default (Codex picks)" }, ...list] : list;
       if (cur && !opts.some(m => m.id === cur)) opts.unshift({ id: cur, label: cur });
-      if (!cur && p.kind === "key" && opts.length) chosen[p.id] = opts[0].id;
+      if (!cur && p.kind !== "connector" && opts.length) chosen[p.id] = opts[0].id;
       select.replaceChildren(...opts.map(m => el("option", { value: m.id, selected: m.id === (chosen[p.id] || "") }, !m.id || m.label === m.id ? m.label : `${m.label} (${m.id})`)));
     };
     if (models[p.id]) fill(models[p.id]);

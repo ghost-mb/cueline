@@ -9,10 +9,13 @@ Every claim links to the second it was said.</p>
   <a href="https://github.com/ghost-mb/cueline/actions/workflows/ci.yml"><img alt="tests" src="https://github.com/ghost-mb/cueline/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Python 3.11-3.14" src="https://img.shields.io/badge/python-3.11--3.14-blue">
   <img alt="MIT license" src="https://img.shields.io/badge/license-MIT-green">
-  <img alt="Runs locally" src="https://img.shields.io/badge/runs-locally-orange">
+  <img alt="Runs on your computer" src="https://img.shields.io/badge/runs%20on-your%20computer-orange">
 </p>
 
-![Cueline home: follow sources, ask with citations, create in Studio, stay current](.github/home.jpg)
+![Demo: a notebook with two NASA videos, a cited answer, the source passage at 0:52, a LinkedIn post with its fact check, and a SKILL.md](.github/demo.gif)
+
+Two NASA videos in, then a cited answer, a LinkedIn post and an agent skill out. Every output is in
+[`examples/`](examples/), unedited, with timestamps you can click.
 
 ## Why Cueline
 
@@ -27,30 +30,29 @@ Research notebooks wait for you to feed them. Cueline goes and gets it:
 - **It teaches your agents.** Turn any notebook into a `SKILL.md` and install it into Claude Code or Codex in one click.
 - **It stays on your laptop.** Your library, keys and outputs live in `~/.cueline`. No account, no server, and Cueline itself sends no telemetry.
 
-## See it work
-
-Two NASA videos in, then a cited answer, a LinkedIn post and an agent skill out. Click a citation and the transcript
-opens at that second. Every output is in [`examples/`](examples/), unedited, with clickable timestamps.
-
-![Demo: a notebook with two NASA videos, a cited answer, the source passage at 0:52, a LinkedIn post with its fact check, and a SKILL.md](.github/demo.gif)
-
-![A new notebook: add sources on the left, chat in the middle, Studio outputs on the right](.github/notebook.jpg)
-
 ## Quickstart
 
-You need [uv](https://docs.astral.sh/uv/getting-started/installation/) (macOS or Linux). It picks a compatible Python (3.11-3.14) or downloads one.
+macOS or Linux. Open a terminal and paste these two lines. The first installs [uv](https://docs.astral.sh/uv/),
+a small Python installer that also fetches a compatible Python for you:
 
 ```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
 uv tool install git+https://github.com/ghost-mb/cueline
+```
+
+Then start it (open a new terminal first if `cueline` isn't found):
+
+```bash
 cueline
 ```
 
-Open **http://127.0.0.1:8790** and pick your AI:
+Open **http://127.0.0.1:8790**. On first start Cueline asks which AI to use:
 
 | AI | What you need |
 |---|---|
-| **ChatGPT plan** | The [Codex CLI](https://github.com/openai/codex), logged in (`codex login`). No API bill. |
+| **Your ChatGPT plan** | OpenAI's [Codex CLI](https://github.com/openai/codex): `brew install --cask codex` (Mac) or `npm install -g @openai/codex`, then run `codex` once and choose **Sign in with ChatGPT**. No API bill. |
 | **Claude, OpenAI, Gemini, OpenRouter** | Paste an API key in the app. It is stored only on your computer. |
+| **A local model** | [Ollama](https://ollama.com) or [LM Studio](https://lmstudio.ai) running on your computer. Nothing leaves your machine. Small models write weaker drafts than the big cloud ones. |
 
 Podcasts and audio transcription run on your computer too. Add them with the `audio` extra (+~400 MB):
 
@@ -59,6 +61,10 @@ uv tool install --force "cueline[audio] @ git+https://github.com/ghost-mb/cuelin
 ```
 
 ## What's inside
+
+![Cueline home: follow sources, ask with citations, create in Studio, stay current](.github/home.jpg)
+
+![A new notebook: add sources on the left, chat in the middle, Studio outputs on the right](.github/notebook.jpg)
 
 | | |
 |---|---|
@@ -103,6 +109,7 @@ Environment variables, all optional:
 | `CUELINE_VOICE_SPEED` | `1.2` | Podcast voice speed (local voices) |
 | `CUELINE_CLAUDE_SKILLS_DIR` / `CUELINE_CODEX_SKILLS_DIR` | `~/.claude/skills` / `~/.codex/skills` | Where skills install |
 | `CUELINE_CODEX_BIN` | `codex` | Path to the Codex CLI |
+| `CUELINE_LOCAL_URL` | `http://localhost:11434/v1` | Local model server (Ollama; LM Studio: `http://localhost:1234/v1`) |
 
 Run on another port with `cueline --port 9000`.
 
@@ -117,6 +124,20 @@ python3 tools/fresh_install_check.py                            # install like a
 
 The code is one Python package (`src/cueline/`: Flask server, SQLite, vanilla JS with no build step).
 On Linux, `scripts/cuelinectl start|stop|status|logs` keeps it running in the background as a systemd user job.
+
+## FAQ
+
+**How is this different from NotebookLM?** NotebookLM is free, polished and hosted by Google. Cueline is open source
+and runs on your computer with the AI you choose. It also follows channels and feeds for you, writes publishable
+formats (scripts, posts, landing pages) in your brand's voice, checks every citation, and turns notebooks into skills
+for your coding agents.
+
+**Is using my ChatGPT plan allowed?** Cueline runs OpenAI's official Codex CLI on your computer with your own login,
+with all of Codex's tools turned off, so usage counts toward your plan's Codex limits just like using Codex directly.
+Check OpenAI's terms for your plan. An API key or a local model are the alternatives.
+
+**Does my data leave my computer?** Your library stays in `~/.cueline`. The text of the sources you use is sent to
+the AI you picked (none if you use a local model), and Cueline fetches the videos, pages and feeds you add.
 
 ## Limits
 
