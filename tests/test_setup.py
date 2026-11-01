@@ -74,3 +74,46 @@ class LocalhostOnly(unittest.TestCase):
         client = app.app.test_client()
         self.assertEqual(client.get("/api/status", headers={"Host": "evil.example:8790"}).status_code, 403)
         self.assertEqual(client.get("/api/status", headers={"Host": "127.0.0.1:8790"}).status_code, 200)
+
+    def test_changes_without_the_cueline_header_are_refused(self):
+        # Other websites can't add custom headers without a CORS preflight we never approve (CSRF guard).
+        from cueline import app
+        client = app.app.test_client()
+        self.assertEqual(client.post("/api/skills", json={"body": BODY}).status_code, 403)
+        self.assertEqual(client.post("/api/skills", json={"body": BODY}, headers={"X-Cueline": "1"}).status_code, 201)
+
+
+class NotebookDelete(unittest.TestCase):
+    def test_removes_media_files_too(self):
+        from cueline import app, studio
+        if os.path.exists(db.DB_PATH):
+            os.remove(db.DB_PATH)
+        db.init()
+        nb = db.insert("notebooks", title="T", created_at=db.now(), updated_at=db.now())
+        item = db.insert("studio_items", notebook_id=nb["id"], kind="podcast", title="P", status="done",
+                         created_at=db.now(), updated_at=db.now())
+        (studio.PODCAST_DIR / item["id"]).mkdir(parents=True)
+        (studio.PODCAST_DIR / item["id"] / "a.mp3").write_bytes(b"mp3")
+        stt.AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+        (stt.AUDIO_DIR / "waiting.mp3").write_bytes(b"audio")
+        db.insert("sources", notebook_id=nb["id"], created_at=db.now(), enabled=1, kind="audio", title="A",
+                  content="", word_count=0, meta={"audio_file": "waiting.mp3"})
+        res = app.app.test_client().delete(f"/api/notebooks/{nb['id']}", headers={"X-Cueline": "1"})
+        self.assertEqual(res.status_code, 204)
+        self.assertFalse((studio.PODCAST_DIR / item["id"]).exists())
+        self.assertFalse((stt.AUDIO_DIR / "waiting.mp3").exists())
+
+
+class CodexStuck(unittest.TestCase):
+    def test_two_timeouts_in_a_row_restart_the_process(self):
+        import subprocess
+        from cueline import llm
+        eng = llm.CodexEngine()
+        eng._proc = subprocess.Popen(["sleep", "30"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+        self.addCleanup(eng._proc.kill)
+        for expect_alive in (True, False):  # first timeout may be a slow start; the second means stuck
+            with self.assertRaisesRegex(llm.LLMError, "did not answer"):
+                eng._request("thread/start", {}, timeout=0.1)
+            eng._proc.poll() if expect_alive else eng._proc.wait(5)
+            self.assertEqual(eng._proc.poll() is None, expect_alive)
+        self.assertEqual(eng._pending, {})

@@ -104,8 +104,8 @@ BACKUP_KEEP = 7
 
 
 def backup_if_due() -> Path | None:
-    """Once a day: a consistent copy of the database (SQLite online backup) to data/backups/cueline-YYYY-MM-DD.db.
-    Keeps the newest BACKUP_KEEP. Restore = stop Cueline, copy a file back over data/cueline.db, start Cueline."""
+    """Once a day: a consistent copy of the database (SQLite online backup) to ~/.cueline/backups/cueline-YYYY-MM-DD.db.
+    Keeps the newest BACKUP_KEEP. Restore = stop Cueline, copy a file back over ~/.cueline/cueline.db, start Cueline."""
     if not DB_PATH.exists():
         return None
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)

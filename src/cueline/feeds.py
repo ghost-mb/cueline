@@ -51,7 +51,7 @@ def _check_public(url: str) -> None:
 
 def _safe_connect(address, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, source_address=None, *args, **kwargs):
     """Connect only to addresses checked in this same lookup, so DNS can't swap in a private one (DNS rebinding).
-    shortcut: an HTTP(S)_PROXY on a private address is refused too; allow-list proxies if someone needs one."""
+    An HTTP(S)_PROXY on a private address is refused too; allow-list it if a user ever needs one."""
     host, port = address[:2]
     err = None
     for family, type_, proto, _, sockaddr in _public_addrs(host, port):

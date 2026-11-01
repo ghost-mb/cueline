@@ -147,6 +147,10 @@ def delete_notebook(nb_id):
     for s in db.query("SELECT id, meta FROM sources WHERE kind = 'notebook'"):
         if (s.get("meta") or {}).get("notebook_id") == nb_id:  # links from other notebooks to this one
             db.delete("sources", s["id"])
+    for item in db.query("SELECT id FROM studio_items WHERE notebook_id = ?", (nb_id,)):
+        studio.delete_images(item["id"])  # the cascade removes rows, not their podcast/image files
+    for src in db.query("SELECT meta FROM sources WHERE notebook_id = ?", (nb_id,)):
+        _drop_audio(src)
     db.delete("notebooks", nb_id)
     retrieval.prune()  # its sources are gone (cascade); drop their search index entries
     return "", 204
@@ -398,11 +402,14 @@ def update_source(src_id):
     return jsonify(src)
 
 
-@app.delete("/api/sources/<src_id>")
-def delete_source(src_id):
-    src = db.one("SELECT meta FROM sources WHERE id = ?", (src_id,))
+def _drop_audio(src: dict | None):
     if src and (src["meta"] or {}).get("audio_file"):  # upload not transcribed yet
         (stt.AUDIO_DIR / Path(src["meta"]["audio_file"]).name).unlink(missing_ok=True)
+
+
+@app.delete("/api/sources/<src_id>")
+def delete_source(src_id):
+    _drop_audio(db.one("SELECT meta FROM sources WHERE id = ?", (src_id,)))
     db.delete("sources", src_id)
     retrieval.forget([src_id])
     return "", 204

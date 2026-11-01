@@ -67,7 +67,8 @@ uv tool install --force "cueline[audio] @ git+https://github.com/Helios-b/cuelin
 - The server listens on `127.0.0.1` only and refuses other host names.
 - Sources are treated as untrusted data. The ChatGPT/Codex engine runs with every tool turned off (no shell, files,
   web or MCP servers), in an empty folder.
-- Generated web pages render in a sandboxed frame with no network access.
+- Generated web pages render in a sandboxed frame: they can't reach Cueline, your files or
+  your network. They may load fonts and code libraries from public CDNs (Google Fonts, cdnjs, jsDelivr).
 - Feeds and web pages are only fetched from public internet addresses, never your computer or local network. The address
   is checked at the moment of connecting, so DNS tricks (rebinding) can't redirect a fetch. Capped at 5 MB.
 - Installing a skill is the only write outside `~/.cueline`, and it always asks first (with a diff and a backup).

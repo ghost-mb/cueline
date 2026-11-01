@@ -77,6 +77,7 @@ class CodexEngine:
     def __init__(self):
         self._proc = None
         self._lock = threading.Lock()          # guards process start + request ids
+        self._timeouts = 0                     # consecutive request timeouts
         self._wlock = threading.Lock()         # guards stdin writes (reader thread writes too)
         self._pending: dict[int, queue.Queue] = {}
         self._threads: dict[str, queue.Queue] = {}  # threadId -> notification queue
@@ -150,6 +151,15 @@ class CodexEngine:
             except (BrokenPipeError, ValueError, AttributeError) as exc:
                 raise LLMError("Codex process is not running") from exc
 
+    def _give_up(self, rid: int):
+        """A request timed out: forget it. Two timeouts in a row = the process is stuck (a single one can be a slow
+        first start): stop it, so the next request starts a fresh one."""
+        self._pending.pop(rid, None)
+        self._timeouts += 1
+        if self._timeouts >= 2 and self._proc and self._proc.poll() is None:
+            self._proc.kill()
+            self._timeouts = 0
+
     def _request_locked(self, method, params, timeout=30):
         """Send a request and wait; the caller already holds self._lock (used during startup)."""
         self._next_id += 1
@@ -160,7 +170,9 @@ class CodexEngine:
         try:
             msg = q.get(timeout=timeout)
         except queue.Empty as exc:
+            self._give_up(rid)
             raise LLMError(f"Codex did not answer {method} in {timeout}s") from exc
+        self._timeouts = 0
         if "error" in msg:
             raise LLMError(f"Codex {method} failed: {msg['error'].get('message', msg['error'])}")
         return msg.get("result") or {}
@@ -176,7 +188,9 @@ class CodexEngine:
         try:
             msg = q.get(timeout=timeout)
         except queue.Empty as exc:
+            self._give_up(rid)
             raise LLMError(f"Codex did not answer {method} in {timeout}s") from exc
+        self._timeouts = 0
         if "error" in msg:
             raise _codex_error(f"Codex {method} failed: {msg['error'].get('message', msg['error'])}")
         return msg.get("result") or {}
