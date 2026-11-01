@@ -18,7 +18,7 @@ uv run --extra audio python -m unittest discover -s tests   # unit tests: AI, vo
 python3 tools/fresh_install_check.py                        # installs like a new user, runs every flow on a fake AI
 ```
 
-CI runs both on Linux and macOS. Tests must never call a real AI, download models or need an API key.
+CI runs them on Linux, macOS and Windows. Tests must never call a real AI, download models or need an API key.
 
 ## Where things live
 

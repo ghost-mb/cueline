@@ -8,6 +8,7 @@ from unittest import mock
 os.environ.setdefault("CUELINE_DATA", tempfile.mkdtemp(prefix="cueline-test-"))
 
 from cueline import db, sources, stt, youtube  # noqa: E402
+import _db  # noqa: E402  (tests/_db.py: empties the temp test database)
 
 VIDEO = {"video_id": "abc123def45", "url": "https://www.youtube.com/watch?v=abc123def45", "title": "No captions",
          "channel": "Chan", "duration_s": 60, "upload_date": "20260101", "description": "", "thumbnail": ""}
@@ -19,9 +20,7 @@ def no_captions(*_a, **_k):
 
 class Fallback(unittest.TestCase):
     def setUp(self):
-        if os.path.exists(db.DB_PATH):
-            os.remove(db.DB_PATH)
-        db.init()
+        _db.fresh()
         self.nb = db.insert("notebooks", title="T", created_at=db.now(), updated_at=db.now())
 
     def test_record_waits_for_local_transcription(self):

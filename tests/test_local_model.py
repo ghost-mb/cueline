@@ -11,6 +11,7 @@ from unittest import mock
 os.environ.setdefault("CUELINE_DATA", tempfile.mkdtemp(prefix="cueline-test-"))
 
 from cueline import db, llm  # noqa: E402
+import _db  # noqa: E402  (tests/_db.py: empties the temp test database)
 
 
 class FakeOllama(BaseHTTPRequestHandler):
@@ -37,9 +38,7 @@ class FakeOllama(BaseHTTPRequestHandler):
 
 class LocalModel(unittest.TestCase):
     def setUp(self):
-        if os.path.exists(db.DB_PATH):
-            os.remove(db.DB_PATH)
-        db.init()
+        _db.fresh()
 
     def use(self, url):
         p = mock.patch.dict(llm.PROVIDERS["local"], {"base_url": url})

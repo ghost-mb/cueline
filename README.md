@@ -32,11 +32,20 @@ Research notebooks wait for you to feed them. Cueline goes and gets it:
 
 ## Quickstart
 
-macOS or Linux. Open a terminal and paste these two lines. The first installs [uv](https://docs.astral.sh/uv/),
-a small Python installer that also fetches a compatible Python for you:
+Open a terminal and paste two lines. The first installs [uv](https://docs.astral.sh/uv/), a small Python installer
+that also fetches a compatible Python for you.
+
+**macOS or Linux** (Terminal):
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
+uv tool install git+https://github.com/ghost-mb/cueline
+```
+
+**Windows** (PowerShell):
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 uv tool install git+https://github.com/ghost-mb/cueline
 ```
 
@@ -141,7 +150,6 @@ the AI you picked (none if you use a local model), and Cueline fetches the video
 
 ## Limits
 
-- **Windows** isn't supported yet (macOS and Linux only).
 - **Scanned PDFs** (images of text) can't be read: there's no OCR.
 - **Updates inbox:** new videos without captions get no AI summary there. Added to a notebook, they're transcribed
   on your computer (with the `audio` extra).

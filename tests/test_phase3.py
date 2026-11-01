@@ -16,6 +16,7 @@ from cueline import images  # noqa: E402
 from cueline import notes  # noqa: E402
 from cueline import studio  # noqa: E402
 from cueline import stt  # noqa: E402
+import _db  # noqa: E402  (tests/_db.py: empties the temp test database)
 
 notes.AUTO_BACKFILL = False
 PNG = b"\x89PNG\r\n\x1a\n" + b"0" * 64
@@ -23,9 +24,7 @@ PNG = b"\x89PNG\r\n\x1a\n" + b"0" * 64
 
 class Base(unittest.TestCase):
     def setUp(self):
-        if os.path.exists(db.DB_PATH):
-            os.remove(db.DB_PATH)
-        db.init()
+        _db.fresh()
         self.nb = db.insert("notebooks", title="Focus notebook", created_at=db.now(), updated_at=db.now())
 
     def add(self, title, content, kind="text", meta=None, nb=None):

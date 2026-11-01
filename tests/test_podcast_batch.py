@@ -12,6 +12,7 @@ from cueline import db  # noqa: E402
 from cueline import notes  # noqa: E402
 from cueline import studio  # noqa: E402
 from cueline import tts  # noqa: E402
+import _db  # noqa: E402  (tests/_db.py: empties the temp test database)
 
 notes.AUTO_BACKFILL = False
 SCRIPT = {"title": "Start small", "summary": "Why tiny starts work.",
@@ -22,9 +23,7 @@ SCRIPT = {"title": "Start small", "summary": "Why tiny starts work.",
 
 class Base(unittest.TestCase):
     def setUp(self):
-        if os.path.exists(db.DB_PATH):
-            os.remove(db.DB_PATH)
-        db.init()
+        _db.fresh()
         self.nb = db.insert("notebooks", title="Pod", created_at=db.now(), updated_at=db.now())
         db.insert("sources", notebook_id=self.nb["id"], kind="text", title="Talk", content="### [0:00]\nShrink the task.",
                   word_count=3, enabled=1, created_at=db.now())

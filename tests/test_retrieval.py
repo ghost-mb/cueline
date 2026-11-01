@@ -12,6 +12,7 @@ from cueline import db  # noqa: E402  (must come after CUELINE_DATA is set)
 from cueline import prompts  # noqa: E402
 from cueline import notes  # noqa: E402
 from cueline import retrieval  # noqa: E402
+import _db  # noqa: E402  (tests/_db.py: empties the temp test database)
 
 notes.AUTO_BACKFILL = False  # a search in a test must never start real AI calls
 
@@ -28,9 +29,7 @@ def video(minutes: int, topic_at: dict | None = None) -> str:
 
 class Base(unittest.TestCase):
     def setUp(self):
-        if os.path.exists(db.DB_PATH):
-            os.remove(db.DB_PATH)
-        db.init()
+        _db.fresh()
         self.nb = db.insert("notebooks", title="Test", created_at=db.now(), updated_at=db.now())
 
     def add(self, nb_id, kind, title, content, url=None, enabled=1, meta=None):

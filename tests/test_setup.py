@@ -12,15 +12,14 @@ os.environ.setdefault("CUELINE_DATA", tempfile.mkdtemp(prefix="cueline-test-"))
 from cueline import db  # noqa: E402
 from cueline import skills  # noqa: E402
 from cueline import stt  # noqa: E402
+import _db  # noqa: E402  (tests/_db.py: empties the temp test database)
 
 BODY = "---\nname: test-skill\ndescription: A test.\n---\n# Test\n"
 
 
 class SkillInstall(unittest.TestCase):
     def setUp(self):
-        if os.path.exists(db.DB_PATH):
-            os.remove(db.DB_PATH)
-        db.init()
+        _db.fresh()
         self.home = Path(tempfile.mkdtemp(prefix="cueline-home-"))
         self.addCleanup(shutil.rmtree, self.home, True)
         self.env = mock.patch.dict(os.environ, {}, clear=False)
@@ -86,9 +85,7 @@ class LocalhostOnly(unittest.TestCase):
 class NotebookDelete(unittest.TestCase):
     def test_removes_media_files_too(self):
         from cueline import app, studio
-        if os.path.exists(db.DB_PATH):
-            os.remove(db.DB_PATH)
-        db.init()
+        _db.fresh()
         nb = db.insert("notebooks", title="T", created_at=db.now(), updated_at=db.now())
         item = db.insert("studio_items", notebook_id=nb["id"], kind="podcast", title="P", status="done",
                          created_at=db.now(), updated_at=db.now())
