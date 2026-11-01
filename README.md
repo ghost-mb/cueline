@@ -1,8 +1,9 @@
 <h1 align="center">Cueline</h1>
 
 <p align="center"><b>Your feeds in, cited content out.</b><br>
-Follow the channels, blogs and podcasts you learn from. Get posts, scripts, landing pages, podcasts and agent skills,<br>
-with every claim linked to the second it was said.</p>
+An open-source NotebookLM for creators. It follows the YouTube channels, blogs and podcasts you learn from<br>
+and turns them into posts, scripts, landing pages, podcasts and agent skills.<br>
+Every claim links to the second it was said.</p>
 
 <p align="center">
   <a href="https://github.com/ghost-mb/cueline/actions/workflows/ci.yml"><img alt="tests" src="https://github.com/ghost-mb/cueline/actions/workflows/ci.yml/badge.svg"></a>
@@ -119,14 +120,15 @@ On Linux, `scripts/cuelinectl start|stop|status|logs` keeps it running in the ba
 
 ## Limits
 
-- **Videos without captions** are transcribed on your computer (needs the `audio` extra; about 5-10 minutes per hour
-  of video). The default speech model is small and fast; `CUELINE_STT_MODEL=small` is more accurate but slower.
-  New videos in **Updates** still need captions for their AI summary.
-- **Scanned PDFs** (images of text) can't be read yet: there's no OCR.
-- **Speed and usage limits** come from your AI plan or key. Studio outputs take 1-2 minutes; chat answers 2-10 seconds.
-- **One person per install**, by design: it runs on your computer, not a server.
-- **Very large notebooks** (over ~360k characters of sources) use keyword passage search instead of reading everything,
-  so answers can miss a passage that uses different words.
+- **Windows** isn't supported yet (macOS and Linux only).
+- **Scanned PDFs** (images of text) can't be read: there's no OCR.
+- **Updates inbox:** new videos without captions get no AI summary there. Added to a notebook, they're transcribed
+  on your computer (with the `audio` extra).
+- **Local transcription** uses a small, fast speech model that sometimes mishears words.
+  `CUELINE_STT_MODEL=small` is more accurate but slower.
+- **Very large notebooks** (over ~360k characters of sources) use keyword search to pick passages, so an answer can
+  miss a passage that uses different words.
+- **Speed and usage** come from your AI plan or key: chat answers take 2-10 seconds, Studio outputs 1-2 minutes.
 
 ## License
 
