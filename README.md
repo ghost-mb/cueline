@@ -122,7 +122,7 @@ uv run --extra audio python -m unittest discover -s tests       # unit tests (AI
 python3 tools/fresh_install_check.py                            # install like a new user, run every flow on a fake AI
 ```
 
-The code is one Python package (`src/cueline/`: Flask server, SQLite, vanilla JS with no build step).
+The code is one Python package (`src/cueline/`: Flask server, SQLite, vanilla JS with no build step). See [CONTRIBUTING.md](CONTRIBUTING.md) for where things live and the ground rules.
 On Linux, `scripts/cuelinectl start|stop|status|logs` keeps it running in the background as a systemd user job.
 
 ## FAQ
