@@ -5,8 +5,8 @@ Follow the channels, blogs and podcasts you learn from. Get posts, scripts, land
 with every claim linked to the second it was said.</p>
 
 <p align="center">
-  <a href="https://github.com/Helios-b/cueline/actions/workflows/ci.yml"><img alt="tests" src="https://github.com/Helios-b/cueline/actions/workflows/ci.yml/badge.svg"></a>
-  <img alt="Python 3.10+" src="https://img.shields.io/badge/python-3.10%2B-blue">
+  <a href="https://github.com/ghost-mb/cueline/actions/workflows/ci.yml"><img alt="tests" src="https://github.com/ghost-mb/cueline/actions/workflows/ci.yml/badge.svg"></a>
+  <img alt="Python 3.11-3.14" src="https://img.shields.io/badge/python-3.11--3.14-blue">
   <img alt="MIT license" src="https://img.shields.io/badge/license-MIT-green">
   <img alt="Runs locally" src="https://img.shields.io/badge/runs-locally-orange">
 </p>
@@ -30,10 +30,10 @@ Research notebooks wait for you to feed them. Cueline goes and gets it:
 
 ## Quickstart
 
-You need [uv](https://docs.astral.sh/uv/getting-started/installation/) (macOS or Linux).
+You need [uv](https://docs.astral.sh/uv/getting-started/installation/) (macOS or Linux). It picks a compatible Python (3.11-3.14) or downloads one.
 
 ```bash
-uv tool install git+https://github.com/Helios-b/cueline
+uv tool install git+https://github.com/ghost-mb/cueline
 cueline
 ```
 
@@ -47,7 +47,7 @@ Open **http://127.0.0.1:8790** and pick your AI:
 Podcasts and audio transcription run on your computer too. Add them with the `audio` extra (+~400 MB):
 
 ```bash
-uv tool install --force "cueline[audio] @ git+https://github.com/Helios-b/cueline"
+uv tool install --force "cueline[audio] @ git+https://github.com/ghost-mb/cueline"
 ```
 
 ## What's inside
@@ -101,7 +101,7 @@ Run on another port with `cueline --port 9000`.
 ## Development
 
 ```bash
-git clone https://github.com/Helios-b/cueline && cd cueline
+git clone https://github.com/ghost-mb/cueline && cd cueline
 uv run --extra audio cueline                                    # run from source
 uv run --extra audio python -m unittest discover -s tests       # unit tests (AI, voices and network are mocked)
 python3 tools/fresh_install_check.py                            # install like a new user, run every flow on a fake AI

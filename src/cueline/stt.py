@@ -34,7 +34,7 @@ _model = None
 _model_lock = threading.Lock()
 on_done = None  # set by app: refresh the source guide after a transcript lands (= watch.on_source_added)
 AUDIO_HINT = ("This needs Cueline's audio add-on (speech-to-text and podcast voices on this computer). "
-              "Install it with: uv tool install --force 'cueline[audio] @ git+https://github.com/Helios-b/cueline' "
+              "Install it with: uv tool install --force 'cueline[audio] @ git+https://github.com/ghost-mb/cueline' "
               "(from a checkout: uv run --extra audio cueline), then restart Cueline.")
 
 

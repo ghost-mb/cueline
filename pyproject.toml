@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Your feeds in, cited content out: follow channels, blogs and podcasts; get posts, scripts, pages, podcasts and agent skills with every claim cited."
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.10"
+requires-python = ">=3.11,<3.15"  # the audio extra (onnxruntime) has wheels for 3.11-3.14 only
 dependencies = [
     "flask>=3.0",
     "yt-dlp",
@@ -29,7 +29,7 @@ audio = [
 cueline = "cueline.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/Helios-b/cueline"
+Homepage = "https://github.com/ghost-mb/cueline"
 
 [build-system]
 requires = ["hatchling"]
