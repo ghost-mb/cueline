@@ -26,6 +26,13 @@ Research notebooks wait for you to feed them. Cueline goes and gets it:
 - **It teaches your agents.** Turn any notebook into a `SKILL.md` and install it into Claude Code or Codex in one click.
 - **It stays on your laptop.** Your library, keys and outputs live in `~/.cueline`. No account, no server, and Cueline itself sends no telemetry.
 
+## See it work
+
+Two NASA videos in, then a cited answer, a LinkedIn post and an agent skill out. Click a citation and the transcript
+opens at that second. Every output is in [`examples/`](examples/), unedited, with clickable timestamps.
+
+![Demo: a notebook with two NASA videos, a cited answer, the source passage at 0:52, a LinkedIn post with its fact check, and a SKILL.md](.github/demo.gif)
+
 ![A new notebook: add sources on the left, chat in the middle, Studio outputs on the right](.github/notebook.jpg)
 
 ## Quickstart

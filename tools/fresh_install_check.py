@@ -202,7 +202,10 @@ def main():
         server.terminate()
         server.wait(10)
         fake.shutdown()
-        print(f"Server log: {work / 'server.log'}")
+        if FAILS:
+            print(f"Server log: {work / 'server.log'}")
+        else:
+            shutil.rmtree(work, ignore_errors=True)  # ~100 MB install; /tmp is often in RAM
     print(f"\n{'ALL PASSED' if not FAILS else f'{len(FAILS)} FAILED'}")
     sys.exit(1 if FAILS else 0)
 
