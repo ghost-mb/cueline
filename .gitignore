@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+dist/
+.private-words
+data/
+
+# Private working notes (kept locally, not published)
+AGENTS.md
+recaps/
+docs/
+marketing/
+# Prompt bench: fixtures hold third-party transcripts, so it stays local
+bench/
+tools/bench.py
+tools/studio_bench.py
+tools/retrieval_eval.py
+tools/build_large_fixture.py

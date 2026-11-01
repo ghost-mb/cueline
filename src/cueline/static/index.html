@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cueline</title>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    // Apply the saved theme before first paint (theme.js owns the menu). Storage can throw in private mode.
+    (function () {
+      var p = "amber", m = "system";
+      try { p = localStorage.getItem("cueline.palette") || p; m = localStorage.getItem("cueline.mode") || m; } catch (e) {}
+      p = { indigo: "tide", ocean: "tide", midnight: "tide", emerald: "sage" }[p] || p;
+      var r = document.documentElement;
+      r.setAttribute("data-palette", p);
+      if (m === "dark" || (m === "system" && matchMedia("(prefers-color-scheme: dark)").matches)) r.setAttribute("data-dark", "");
+    })();
+  </script>
+  <link rel="stylesheet" href="/static/css/themes.css">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/vendor/marked.min.js"></script>
+  <script src="/static/vendor/purify.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a href="#/" class="brand" aria-label="Cueline home"><span class="brand-mark" data-live></span><span class="brand-name">Cueline</span></a>
+    <div class="topbar-title" id="topbar-title"></div>
+    <nav class="topbar-actions">
+      <button type="button" class="ai-status" id="ai-status" title="AI model"><span class="dot"></span><span class="label">Connecting…</span></button>
+      <button class="icon-btn" id="nav-theme" title="Appearance" aria-label="Appearance" aria-haspopup="dialog"></button>
+      <a href="#/search" class="icon-btn" id="nav-search" title="Search all notebooks" aria-label="Search all notebooks"></a>
+      <a href="#/updates" class="btn ghost nav-link" id="nav-updates"></a>
+      <a href="#/skills" class="btn ghost nav-link" id="nav-skills"></a>
+      <button class="btn primary" id="nav-create"></button>
+    </nav>
+  </header>
+  <main id="app"></main>
+  <div id="modal-root"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="/static/js/main.js"></script>
+</body>
+</html>

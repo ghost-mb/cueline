@@ -1,0 +1,36 @@
+[project]
+name = "cueline"
+version = "0.1.0"
+description = "Your feeds in, cited content out: follow channels, blogs and podcasts; get posts, scripts, pages, podcasts and agent skills with every claim cited."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = [
+    "flask>=3.0",
+    "yt-dlp",
+    "youtube-transcript-api>=1.0",
+    "pypdf>=5.0",
+    "python-docx>=1.1",
+    "defusedxml>=0.7",
+    "anthropic",
+    "openai",
+]
+
+[project.optional-dependencies]
+# Local speech-to-text and podcast voices (~400 MB)
+audio = [
+    "faster-whisper>=1.2",
+    "av<16",  # faster-whisper 1.2 passes metadata_errors, removed in av 16
+    "kokoro-onnx>=0.6",  # voice model files download to ~/.cueline/models/kokoro on first use
+    "numpy",
+]
+
+[project.scripts]
+cueline = "cueline.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Helios-b/cueline"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

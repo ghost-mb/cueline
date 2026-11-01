@@ -1,0 +1,83 @@
+/* Cueline themes. <html data-palette="…"> picks the palette; [data-dark] picks the dark variant (set by the inline
+   script in index.html from the saved preference or the OS setting). Every text pair is checked for WCAG AA
+   (4.5:1 text, 3:1 UI) by tools/check_contrast.py — re-run it after changing a value.
+   Tokens: bg/panel/raised surfaces · ink/ink-2/muted text · faint icons/placeholders · line/line-2 borders ·
+   chip/chip-hover fills · primary/on-primary main buttons · accent/accent-2 brand light · accent-soft/accent-ink tinted callouts. */
+
+:root {
+  --font-body: "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Manrope", "DM Sans", system-ui, sans-serif;
+  --font-serif: Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --radius: 20px; --radius-sm: 12px;
+  --ok: #18794e; --ok-soft: #e3f4ea; --bad: #c4321f; --bad-soft: #fde9e6; --info: #2457c5; --info-soft: #e7eefc;
+  --shadow: 0 1px 2px rgba(16, 18, 24, .05), 0 4px 16px rgba(16, 18, 24, .04);
+  --shadow-lg: 0 10px 40px rgba(16, 18, 24, .18);
+  --c-violet: #7c4dff; --c-orange: #ef6c00; --c-blue: #1e6fe8; --c-teal: #0f9488; --c-indigo: #4f46e5;
+  --c-green: #16a34a; --c-pink: #db2777; --c-amber: #d97706; --c-red: #dc2626; --c-gold: #b7791f;
+  color-scheme: light;
+}
+:root[data-dark] {
+  --ok: #5bd394; --ok-soft: #12301f; --bad: #ff8a7a; --bad-soft: #3d1714; --info: #8fb4ff; --info-soft: #172744;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4); --shadow-lg: 0 10px 40px rgba(0, 0, 0, .6);
+  --c-violet: #a78bfa; --c-orange: #fb923c; --c-blue: #60a5fa; --c-teal: #2dd4bf; --c-indigo: #818cf8;
+  --c-green: #4ade80; --c-pink: #f472b6; --c-amber: #fbbf24; --c-red: #f87171; --c-gold: #e2b04a;
+  color-scheme: dark;
+}
+
+/* 1. Cueline — warm paper + amber light (default) */
+:root, :root[data-palette="amber"] {
+  --bg: #f4f2ec; --panel: #ffffff; --raised: #faf8f4; --ink: #1d1b17; --ink-2: #3b3832; --muted: #6b665c;
+  --faint: #8f897d; --line: #e7e3d9; --line-2: #d8d3c7; --chip: #f1eee6; --chip-hover: #e8e4da;
+  --primary: #1d1b17; --on-primary: #ffffff; --accent: #d4780a; --accent-2: #f7b733;
+  --accent-soft: #fdf0d9; --accent-ink: #7a4100;
+}
+:root[data-palette="amber"][data-dark], :root:not([data-palette])[data-dark] {
+  --bg: #121110; --panel: #1b1a18; --raised: #23211e; --ink: #f3f0e8; --ink-2: #d8d3c8; --muted: #a8a296;
+  --faint: #7d776c; --line: #2d2b27; --line-2: #3b3934; --chip: #292724; --chip-hover: #33312d;
+  --primary: #f3f0e8; --on-primary: #121110; --accent: #f2a33a; --accent-2: #f7c164;
+  --accent-soft: #3a2a12; --accent-ink: #f8c877;
+}
+
+/* Palettes 2–4 are generated in OKLCH (one neutral hue + one accent hue each); tools/gen_palettes.py. */
+/* 2. Coral — neutral stone + terracotta coral (one accent, also the main button) */
+:root[data-palette="coral"] {
+  --bg: #f8f3f1; --panel: #ffffff; --raised: #fdfbf9; --ink: #1e1916; --ink-2: #443e3b; --muted: #6d6864;
+  --faint: #96918e; --line: #e9e5e2; --line-2: #d9d5d2; --chip: #f2eeeb; --chip-hover: #e8e4e1;
+  --primary: #b2422c; --on-primary: #ffffff; --accent: #d15e47; --accent-2: #f09682;
+  --accent-soft: #ffebe7; --accent-ink: #752111;
+}
+:root[data-palette="coral"][data-dark] {
+  --bg: #100e0c; --panel: #181514; --raised: #1f1d1b; --ink: #f2f0ee; --ink-2: #d6d4d2; --muted: #a7a4a2;
+  --faint: #7d7a78; --line: #2a2725; --line-2: #363332; --chip: #252221; --chip-hover: #2f2c2a;
+  --primary: #fbb7a8; --on-primary: #100e0c; --accent: #f3947f; --accent-2: #fdb7a7;
+  --accent-soft: #44231c; --accent-ink: #fdc5b8;
+}
+
+/* 3. Sage — grey-green paper + muted moss (no neon green; dark mode stays near-neutral) */
+:root[data-palette="sage"] {
+  --bg: #f2f6ef; --panel: #ffffff; --raised: #fafcf8; --ink: #171c15; --ink-2: #3c4239; --muted: #656b63;
+  --faint: #8f948d; --line: #e3e8e1; --line-2: #d3d7d1; --chip: #ecf1ea; --chip-hover: #e2e7e0;
+  --primary: #345035; --on-primary: #ffffff; --accent: #557d56; --accent-2: #86a586;
+  --accent-soft: #ebf3eb; --accent-ink: #2d4b2e;
+}
+:root[data-palette="sage"][data-dark] {
+  --bg: #0d0f0c; --panel: #141713; --raised: #1c1e1a; --ink: #eff1ee; --ink-2: #d2d5d1; --muted: #a2a6a1;
+  --faint: #787b77; --line: #262925; --line-2: #323531; --chip: #212420; --chip-hover: #2b2d2a;
+  --primary: #bbd2ba; --on-primary: #0d0f0c; --accent: #9abc9a; --accent-2: #b9d3b9;
+  --accent-soft: #263126; --accent-ink: #c7dbc7;
+}
+
+/* 4. Tide — cool paper + ink blue (true blue, not indigo; dark mode stays near-neutral) */
+:root[data-palette="tide"] {
+  --bg: #f0f5fb; --panel: #ffffff; --raised: #f9fbfe; --ink: #151b22; --ink-2: #3a4148; --muted: #636a71;
+  --faint: #8d9399; --line: #e1e7ed; --line-2: #d1d6dc; --chip: #eaf0f6; --chip-hover: #e0e6ec;
+  --primary: #1e4b72; --on-primary: #ffffff; --accent: #2d6da5; --accent-2: #6997c3;
+  --accent-soft: #e7f2fc; --accent-ink: #13456e;
+}
+:root[data-palette="tide"][data-dark] {
+  --bg: #0c0f12; --panel: #13161a; --raised: #1b1e21; --ink: #eef0f3; --ink-2: #d1d5d8; --muted: #a1a5a9;
+  --faint: #777b7f; --line: #25282c; --line-2: #313438; --chip: #202327; --chip-hover: #2a2d30;
+  --primary: #accff1; --on-primary: #0c0f12; --accent: #84b6e7; --accent-2: #a9cff4;
+  --accent-soft: #1e3040; --accent-ink: #bbd8f4;
+}

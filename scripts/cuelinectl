@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Linux: run Cueline from this checkout in the background as a transient systemd user job named "cueline"
+# (no unit file written; gone after stop or reboot). Settings: optional ~/.cueline/local.env (KEY=value lines,
+# e.g. CUELINE_AUDIO=1 to include the audio extra, CUELINE_PORT, CUELINE_ACTIVITY_LOG).
+#   cuelinectl start | stop | restart | status | logs
+set -uo pipefail
+DIR="$(cd "$(dirname "$0")/.." && pwd)"
+ENVFILE="${CUELINE_DATA:-$HOME/.cueline}/local.env"
+if [ -f "$ENVFILE" ]; then set -a; . "$ENVFILE"; set +a; fi
+PORT="${CUELINE_PORT:-8790}"
+UV="$(command -v uv || echo "$HOME/.local/bin/uv")"
+URL="http://127.0.0.1:$PORT"
+UNIT=cueline
+
+up() { curl -s -o /dev/null --max-time 2 "$URL/api/status"; }
+
+wait_up() {
+  for _ in $(seq 60); do up && return 0; sleep 0.5; done
+  return 1
+}
+
+ai_line() {
+  curl -s --max-time 3 "$URL/api/ai" | python3 -c 'import sys,json
+try:
+    d=json.load(sys.stdin); print("AI:", d.get("label") or d.get("provider"), "·", d.get("model") or "default model")
+except Exception: pass'
+}
+
+case "${1:-start}" in
+  start)
+    if up; then echo "Cueline is already running: $URL"; ai_line; exit 0; fi
+    systemctl --user reset-failed "$UNIT" 2>/dev/null
+    systemd-run --user --unit="$UNIT" --collect --quiet \
+      --working-directory="$DIR" --setenv=PATH="$PATH" --setenv=HOME="$HOME" \
+      $([ -f "$ENVFILE" ] && echo "--property=EnvironmentFile=$ENVFILE") \
+      "$UV" run --project "$DIR" $([ "${CUELINE_AUDIO:-}" = 1 ] && echo --extra audio) cueline --port "$PORT" || { echo "Could not start Cueline (systemd-run failed)."; exit 1; }
+    if wait_up; then echo "Cueline started: $URL"; ai_line
+    else echo "Cueline did not answer within 30 s. Last log lines:"; journalctl --user -u "$UNIT" -n 20 --no-pager; exit 1; fi
+    ;;
+  stop)
+    if systemctl --user is-active --quiet "$UNIT"; then systemctl --user stop "$UNIT"; echo "Cueline stopped."
+    elif up; then echo "Cueline is running outside cuelinectl (started by hand?). Stop it where it was started."; exit 1
+    else echo "Cueline is not running."; fi
+    ;;
+  restart)
+    "$0" stop >/dev/null; sleep 1; exec "$0" start
+    ;;
+  status)
+    if up; then echo "Cueline is running: $URL"; ai_line
+      systemctl --user is-active --quiet "$UNIT" || echo "(started outside cuelinectl)"
+    else echo "Cueline is not running. Start it with: $0 start"; exit 3; fi
+    ;;
+  logs)
+    journalctl --user -u "$UNIT" -n "${2:-40}" --no-pager
+    ;;
+  *)
+    echo "Usage: cuelinectl start|stop|restart|status|logs"; exit 2
+    ;;
+esac
