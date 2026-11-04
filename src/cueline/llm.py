@@ -1,7 +1,7 @@
 """AI engine. `engine` routes every call to the provider chosen in Settings (top bar → AI model):
 
 - "codex" (connector, default): one persistent, locked-down `codex app-server` process (JSON-RPC over stdio) on the
-  user's ChatGPT login (same subscription Hermes uses). Every call runs in a fresh ephemeral thread whose base
+  user's ChatGPT login. Every call runs in a fresh ephemeral thread whose base
   instructions are ours, so Codex's own coding-agent prompt is replaced. All tools are off: the model can only write.
 - "anthropic" / "openai" / "gemini" / "openrouter" (API key): see llm_api.py. Keys live in data/keys.json (0600)
   or CUELINE_<PROVIDER>_API_KEY, are never sent to the browser, and are never logged.

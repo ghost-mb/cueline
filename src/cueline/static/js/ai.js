@@ -120,7 +120,7 @@ export async function openAiSettings(onSaved, firstRun = false) {
   const m = modal({
     title: firstRun ? "Pick your AI" : "AI model", iconNode: icon("sparkles"),
     body: [el("p", { class: "muted", style: { marginTop: "0" } }, firstRun
-      ? "Cueline needs an AI to read your sources and write. Paste an API key (Claude, OpenAI, Gemini or OpenRouter), or pick ChatGPT if the Codex CLI is installed and logged in (codex login)."
+      ? "Cueline needs an AI to read your sources and write. Paste an API key (Claude, OpenAI, Gemini or OpenRouter), pick a local model (Ollama or LM Studio), or pick ChatGPT if the Codex CLI is installed and logged in (codex login)."
       : "Choose what writes Cueline's answers, Studio outputs and update summaries."), group, detail, images, voices, speech],
     foot: [el("button", { class: "btn ghost", onclick: () => m.close() }, "Cancel"), saveBtn],
   });

@@ -124,3 +124,28 @@ class SourceNames(unittest.TestCase):
                                         "meta": {"channel": 'Daniel "D" Rosehill'}}])
         self.assertIn("channel=\"Daniel 'D' Rosehill\"", block)
         self.assertIn("channel's spelling", prompts.CITATION_RULES)
+
+
+class Cli(unittest.TestCase):
+    def run_cli(self, *args):
+        from cueline import cli
+        with mock.patch("sys.argv", ["cueline", *args]), mock.patch("cueline.app.serve") as serve:
+            cli.main()
+        return serve
+
+    def test_port_forms(self):
+        from cueline import cli
+        self.run_cli("--port", "9000").assert_called_once_with(9000)
+        self.run_cli("--port=9001").assert_called_once_with(9001)
+        with mock.patch.object(cli, "PORT", "9002"):
+            self.run_cli().assert_called_once_with(9002)
+
+    def test_version(self):
+        import contextlib
+        import io
+        raw = io.BytesIO()
+        out = io.TextIOWrapper(raw)  # main() reconfigures stdout, which StringIO can't do
+        with contextlib.redirect_stdout(out):
+            self.run_cli("--version").assert_not_called()
+        out.flush()
+        self.assertRegex(raw.getvalue().decode(), r"^cueline \d+\.\d+")

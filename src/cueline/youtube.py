@@ -1,7 +1,4 @@
 """Fetch YouTube metadata + transcript. No LLM calls, nothing downloaded but text.
-
-Adapted from the Hermes skill ~/.hermes/skills/youtube_learner/extract.py (copied, not imported,
-so Hermes updates can't break the app).
 """
 import re
 from urllib.parse import parse_qs, urlparse

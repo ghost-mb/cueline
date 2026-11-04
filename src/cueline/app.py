@@ -55,7 +55,7 @@ def not_found(_):
 
 @app.errorhandler(413)
 def too_large(_):
-    return err("That file is larger than 30 MB.", 413)
+    return err("That file is too large: audio can be up to 400 MB, other files up to 30 MB.", 413)
 
 
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "penguin.linux.test"}  # last one = ChromeOS Linux

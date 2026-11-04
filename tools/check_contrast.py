@@ -1,4 +1,4 @@
-"""Check every theme in static/css/themes.css against WCAG AA. Run: python3 tools/check_contrast.py
+"""Check every theme in src/cueline/static/css/themes.css against WCAG AA. Run: python3 tools/check_contrast.py
 
 Text pairs need 4.5:1; UI parts (focus ring, icons, placeholder hints) need 3:1. Exits 1 on any failure.
 """
@@ -6,7 +6,7 @@ import re
 import sys
 from pathlib import Path
 
-CSS = (Path(__file__).resolve().parent.parent / "static" / "css" / "themes.css").read_text()
+CSS = (Path(__file__).resolve().parent.parent / "src" / "cueline" / "static" / "css" / "themes.css").read_text()
 
 # (foreground, background, minimum ratio, what it is)
 PAIRS = [

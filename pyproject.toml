@@ -1,7 +1,14 @@
 [project]
 name = "cueline"
 version = "0.1.0"
-description = "Your feeds in, cited content out: follow channels, blogs and podcasts; get posts, scripts, pages, podcasts and agent skills with every claim cited."
+description = "An open-source NotebookLM for creators: follow channels, blogs and podcasts; get cited answers, posts, scripts, pages, podcasts and agent skills. Runs on your computer."
+keywords = ["notebooklm", "rag", "citations", "youtube", "rss", "podcasts", "content-creation", "agent-skills", "local-first"]
+classifiers = [
+    "Environment :: Web Environment",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+]
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11,<3.15"  # the audio extra (onnxruntime) has wheels for 3.11-3.14 only
@@ -37,6 +44,7 @@ cueline = "cueline.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/ghost-mb/cueline"
+Issues = "https://github.com/ghost-mb/cueline/issues"
 
 [build-system]
 requires = ["hatchling"]

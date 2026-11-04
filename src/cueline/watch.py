@@ -5,7 +5,7 @@ One scheduler thread (wakes every minute, checks follows older than CUELINE_WATC
   full    → read the item + AI summary, key points, fit score and 3 content ideas
   summary → read the item + AI summary only
   off     → nothing (inbox shows title + thumbnail; the text is fetched when the user adds the item)
-AI calls are capped per day (CUELINE_FEED_DAILY_CAP) because the Codex quota is shared with Hermes.
+AI calls are capped per day (CUELINE_FEED_DAILY_CAP) because each one uses the AI plan or key.
 
 Update status: queued → processing → ready | error; 'skipped' = older entries seen on the first check (hidden).
 Update state (the user's choice): inbox | added | dismissed. Nothing becomes a source until the user adds it,

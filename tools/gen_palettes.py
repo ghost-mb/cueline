@@ -1,4 +1,4 @@
-"""Generate Cueline palettes 2–4 for static/css/themes.css (paste the output over them, then run check_contrast.py).
+"""Generate Cueline palettes 2–4 for src/cueline/static/css/themes.css (paste the output over them, then run check_contrast.py).
 Tokens from OKLCH (lightness, chroma, hue) → sRGB hex, clipping chroma into gamut."""
 import math, sys
 

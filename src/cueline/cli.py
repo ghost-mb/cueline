@@ -1,6 +1,7 @@
 """The `cueline` command: start the app, or talk to a running one from the terminal (handy for AI agents).
 
   cueline [--port 8790]                              start Cueline → http://127.0.0.1:8790
+  cueline --version                                  print the installed version
   cueline notebooks                                  list notebooks (id, sources, title)
   cueline new "Title"                                create a notebook, print its id
   cueline add <notebook> <youtube-url>               add a YouTube video (captions)
@@ -10,6 +11,7 @@
   cueline ask <notebook> "question"                  ask the notebook; prints the cited answer (saved in its chat)
 
 <notebook> = id, or part of the title (must match exactly one). The other commands need Cueline running.
+CUELINE_PORT sets the port for all of these, if you don't use the default 8790.
 """
 import json
 import mimetypes
@@ -20,7 +22,8 @@ import urllib.request
 import uuid
 from pathlib import Path
 
-URL = f"http://127.0.0.1:{os.environ.get('CUELINE_PORT', '8790')}"
+PORT = os.environ.get("CUELINE_PORT", "8790")
+URL = f"http://127.0.0.1:{PORT}"
 
 
 def die(msg: str, code: int = 1):
@@ -127,9 +130,13 @@ def main():
     args = sys.argv[1:]
     if args and args[0] in COMMANDS:
         return COMMANDS[args[0]](args[1:])
+    if args in (["-V"], ["--version"]):
+        from importlib.metadata import version
+        return print("cueline", version("cueline"))
+    args = [part for arg in args for part in arg.split("=", 1)]  # --port=9000 works too
     if not args or (len(args) == 2 and args[0] == "--port" and args[1].isdigit()):
         from .app import serve  # imported here so agent commands start instantly
-        return serve(int(args[1]) if args else 8790)
+        return serve(int(args[1] if args else PORT))
     print(__doc__.strip())
     sys.exit(0 if args in (["-h"], ["--help"]) else 2)
 

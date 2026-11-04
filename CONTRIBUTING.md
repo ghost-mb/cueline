@@ -11,6 +11,9 @@ uv run --extra audio cueline          # http://127.0.0.1:8790, data in ~/.cuelin
 
 Use `CUELINE_DATA=/tmp/cueline-dev` to keep a separate library while you work.
 
+Found a bug? Open an [issue](https://github.com/ghost-mb/cueline/issues) with the output of `cueline --version`, your
+operating system and which AI you use. Security problems go through [SECURITY.md](SECURITY.md) instead.
+
 ## Before you open a pull request
 
 ```bash
