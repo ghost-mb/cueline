@@ -756,6 +756,10 @@ def _resolve_follow(body: dict) -> dict:
     return feeds.resolve(str(body.get("url") or ""))
 
 
+def _focus(body: dict) -> str | None:
+    return str(body.get("focus") or "").strip()[:300] or None
+
+
 @app.post("/api/follows/preview")
 def preview_follow():
     """Find what a link (or YouTube search) points to and show its newest items. Stores nothing."""
@@ -781,7 +785,7 @@ def add_follow(nb_id):
         return err("This notebook already follows that.", 409)
     body = request.get_json(silent=True) or {}
     f = db.insert("follows", notebook_id=nb_id, enabled=1, auto_add=1 if body.get("auto_add") else 0,
-                  created_at=db.now(), **info)
+                  focus=_focus(body), created_at=db.now(), **info)
     db.touch_notebook(nb_id)
     threading.Thread(target=watch.check_follow, args=(f["id"],), daemon=True).start()
     return jsonify(f), 201
@@ -798,6 +802,8 @@ def update_follow(follow_id):
             fields.update(fail_count=0, last_error=None)
     if "auto_add" in body:
         fields["auto_add"] = 1 if body["auto_add"] else 0
+    if "focus" in body:
+        fields["focus"] = _focus(body)
     if "transcribe_audio" in body:
         if body["transcribe_audio"]:
             try:
@@ -835,7 +841,7 @@ def list_updates():
               JOIN notebooks n ON n.id = u.notebook_id LEFT JOIN projects p ON p.id = n.project_id
               WHERE u.status != 'skipped'"""
     params: list = []
-    if a.get("state", "inbox") in ("inbox", "added", "dismissed"):
+    if a.get("state", "inbox") in ("inbox", "added", "dismissed", "filtered"):
         sql += " AND u.state = ?"
         params.append(a.get("state", "inbox"))
     for arg, col in (("project", "n.project_id"), ("notebook", "u.notebook_id"), ("follow", "u.follow_id")):
@@ -859,10 +865,13 @@ def check_updates():
 
 @app.patch("/api/updates/<update_id>")
 def update_update(update_id):
-    need(db.one("SELECT id FROM updates WHERE id = ?", (update_id,)))
+    item = need(db.one("SELECT id, state FROM updates WHERE id = ?", (update_id,)))
     state = (request.get_json(silent=True) or {}).get("state")
     if state not in ("inbox", "dismissed"):
         return err("Unknown state")
+    if item["state"] == "filtered" and state == "inbox":
+        watch.restore(update_id)
+        return jsonify(db.one("SELECT * FROM updates WHERE id = ?", (update_id,)))
     return jsonify(db.update("updates", update_id, state=state, updated_at=db.now()))
 
 

@@ -247,8 +247,42 @@ TRIAGE_SCHEMA = {
 }
 
 
-def triage_prompt(notebook: dict, project: dict | None, brand_kit: dict | None, item: dict, mode: str = "full") -> str:
+# A live source's focus note ("battery research, skip product reviews"): the user's own rule for what reaches the inbox.
+SCREEN_CHARS = 1500
+SCREEN_SYSTEM = f"""You screen a new item from a source the user follows, before anyone reads it in full. You only see its
+title and perhaps a short description. Compare it with the user's focus note.
+Set keep to false only when the item is clearly outside what the note wants, or clearly what it says to skip.
+An item that features something the note asks for is a match, even if it isn't the main topic.
+A vague title, a teaser or any doubt means keep is true: the item then gets read in full.
+{SAFETY_RULES}"""
+SCREEN_SCHEMA = {
+    "type": "object", "additionalProperties": False, "required": ["keep", "reason"],
+    "properties": {"keep": {"type": "boolean"},
+                   "reason": {"type": "string", "description": "under 15 words: what the item is about, compared with the note"}},
+}
+_FOCUS_RULE = ("Set matches_focus to false only if the item is clearly outside what the focus note wants, or clearly what "
+               "it says to skip. An item that features something the note asks for is a match, even if it isn't the main topic. If in "
+               "doubt, true.")
+
+
+def screen_prompt(focus: str, item: dict) -> str:
+    return (f"<focus_note>{focus}</focus_note>\n\n"
+            f'<sources>\n<source id="S1" type="{item["kind"]}" title="{_attr(item["title"])}" '
+            f'author="{_attr(item.get("author") or "")}">\n{(item.get("content") or "")[:SCREEN_CHARS]}\n</source>\n</sources>\n\n'
+            "Should this item reach the user's inbox?")
+
+
+def with_focus(schema: dict) -> dict:
+    return {**schema, "required": [*schema["required"], "matches_focus", "focus_reason"],
+            "properties": {**schema["properties"], "matches_focus": {"type": "boolean"},
+                           "focus_reason": {"type": "string", "description": "under 15 words: what the item is about, compared with the note"}}}
+
+
+def triage_prompt(notebook: dict, project: dict | None, brand_kit: dict | None, item: dict, mode: str = "full",
+                  focus: str = "") -> str:
     lines = ["<context>", f"Notebook: {notebook.get('title') or 'Untitled notebook'}"]
+    if focus:
+        lines.append(f"The user's focus note for this source: {focus}")
     if notebook.get("summary"):
         lines.append(f"Notebook summary: {notebook['summary'][:800]}")
     if project:
@@ -261,4 +295,6 @@ def triage_prompt(notebook: dict, project: dict | None, brand_kit: dict | None, 
     lines.append("Summarize this item." if mode == "summary" else
                  "Triage this item: summary, key points, fit and 3 content ideas (mix formats; prefer short_video and "
                  "offer when the insight supports them).")
+    if focus:
+        lines.append(_FOCUS_RULE)
     return "\n".join(lines)

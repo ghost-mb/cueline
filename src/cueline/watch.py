@@ -8,7 +8,11 @@ One scheduler thread (wakes every minute, checks follows older than CUELINE_WATC
 AI calls are capped per day (CUELINE_FEED_DAILY_CAP) because each one uses the AI plan or key.
 
 Update status: queued → processing → ready | error; 'skipped' = older entries seen on the first check (hidden).
-Update state (the user's choice): inbox | added | dismissed. Nothing becomes a source until the user adds it,
+A follow with a focus note screens each item by title first (a small AI call; ruling one out counts as a fifth of a read
+toward the daily cap), so off-topic items cost no transcript or full read, and checks again after a full read. Items that don't match get
+state 'filtered' (never deleted); any AI failure keeps the item.
+
+Update state: inbox | added | dismissed | filtered. Nothing becomes a source until the user adds it,
 except for follows with auto_add on: their new items are added as sources once read (marked is_new, which shows as
 "new" on the notebook card and the home page until the notebook is opened), capped at AUTO_ADD_DAILY_CAP a day.
 """
@@ -33,6 +37,7 @@ FIRST_RUN_ITEMS = 3      # a new follow shows its 3 newest items, not its whole 
 MAX_NEW_PER_CHECK = 8
 TRIAGE_CHARS = 60_000
 AUTO_ADD_DAILY_CAP = int(os.environ.get("CUELINE_AUTO_ADD_DAILY_CAP", "10"))  # each add = source guide + notebook guide
+LOW_FIT = 40  # the prompt's "off-topic, promotional or thin" band
 FAIL_PAUSE = 5  # a live source pauses itself after this many failed checks in a row (network outages don't count)
 NETWORK_RE = re.compile(r"name resolution|failed to resolve|timed out|timeout|connection (?:refused|reset|aborted)|"
                         r"network is unreachable|urlopen error|temporarily unavailable|no route to host", re.I)
@@ -70,7 +75,8 @@ def check_follow(follow_id: str) -> dict:
         return db.update("follows", follow_id, **fields)
     seen = {r["guid"] for r in db.query("SELECT guid FROM updates WHERE follow_id = ?", (follow_id,))}
     fresh = [e for e in entries if e["guid"] not in seen]
-    take = FIRST_RUN_ITEMS if not seen else MAX_NEW_PER_CHECK
+    # A narrow focus could rule out all of the newest few, which would look like the follow is broken.
+    take = FIRST_RUN_ITEMS if not seen and not f.get("focus") else MAX_NEW_PER_CHECK
     now = db.now()
     for i, e in enumerate(fresh):
         status = "queued" if i < take else "skipped"
@@ -136,7 +142,9 @@ def requeue() -> None:
 
 def triaged_today() -> int:
     midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat(timespec="seconds")
-    return db.one("SELECT COUNT(*) AS n FROM updates WHERE triaged_at >= ?", (midnight,))["n"]
+    # Ruled out by title: about a fifth of the time of a read. Weighted so a busy feed can't make unlimited AI calls.
+    return db.one("""SELECT COALESCE(SUM(CASE json_extract(triage, '$.mode') WHEN 'screen' THEN 1 ELSE 5 END), 0) / 5 AS n
+                     FROM updates WHERE triaged_at >= ?""", (midnight,))["n"]
 
 
 def read_text(item: dict) -> tuple[str, dict]:
@@ -228,14 +236,43 @@ def auto_added_today() -> int:
 
 def _maybe_auto_add(update_id: str) -> None:
     """After an item is read: add it as a source if its live source has auto-add on (and today's cap allows)."""
-    row = db.one("""SELECT f.auto_add, u.state FROM updates u JOIN follows f ON f.id = u.follow_id
+    row = db.one("""SELECT f.auto_add, f.focus, u.state, u.triage, n.summary FROM updates u
+                    JOIN follows f ON f.id = u.follow_id JOIN notebooks n ON n.id = u.notebook_id
                     WHERE u.id = ?""", (update_id,))
     if not row or not row["auto_add"] or row["state"] != "inbox" or auto_added_today() >= AUTO_ADD_DAILY_CAP:
+        return
+    fit = (row["triage"] or {}).get("relevance")
+    # An empty notebook has nothing to fit: everything scores low, and blocking would keep it empty for good.
+    if not row["focus"] and row["summary"] and fit is not None and fit < LOW_FIT:
         return
     try:
         add_to_notebook(update_id, auto=True)
     except Exception as exc:  # stays in the inbox; the user can still add it by hand
         log.warning("auto-add %s failed: %s", update_id, exc)
+
+
+def _screen(item: dict, focus: str) -> dict | None:
+    """The triage to store if the title alone rules the item out, else None. Failing keeps the item: it gets read."""
+    try:
+        res = engine.generate_json(prompts.SCREEN_SYSTEM, prompts.screen_prompt(focus, item), prompts.SCREEN_SCHEMA,
+                                   effort="low", timeout=60)
+    except QuotaError:
+        raise
+    except Exception as exc:
+        log.warning("focus screen %s failed: %s", item["id"], exc)
+        return None
+    return None if res.get("keep") is not False else {"matches_focus": False, "focus_reason": str(res.get("reason") or ""),
+                                                      "mode": "screen"}
+
+
+def restore(update_id: str) -> None:
+    """The user overrules their focus note for one filtered item. Screened by title only: read it now."""
+    item = db.one("SELECT * FROM updates WHERE id = ?", (update_id,))
+    unread = not (item["triage"] or {}).get("summary")
+    db.update("updates", update_id, state="inbox", meta={**(item["meta"] or {}), "keep": True}, updated_at=db.now(),
+              **({"status": "queued", "triage": None} if unread else {}))
+    if unread:
+        enqueue(update_id)
 
 
 def process(update_id: str) -> None:
@@ -250,21 +287,32 @@ def process(update_id: str) -> None:
     if triaged_today() >= DAILY_CAP or engine.paused():
         return  # stays queued; the scheduler requeues it after midnight UTC / when the usage limit pause ends
     db.update("updates", update_id, status="processing", updated_at=db.now())
+    follow = db.one("SELECT focus FROM follows WHERE id = ?", (item["follow_id"],)) or {}
+    meta = item["meta"] or {}
+    focus = "" if meta.get("keep") else follow.get("focus") or ""
+    filtered = {"state": "filtered"} if item["state"] == "inbox" else {}  # never overrule a choice made while it was queued
     try:
+        if focus and not meta.get("full_text"):
+            verdict = _screen(item, focus)
+            if verdict:
+                db.update("updates", update_id, status="ready", triage=verdict, triaged_at=db.now(), error=None,
+                          updated_at=db.now(), **filtered)
+                return
         item = fill_text(update_id)
         nb = db.one("SELECT id, title, summary, project_id FROM notebooks WHERE id = ?", (item["notebook_id"],)) or {}
         project = db.one("SELECT * FROM projects WHERE id = ?", (nb.get("project_id"),)) if nb.get("project_id") else None
         kit = db.one("SELECT name, body FROM skills WHERE id = ?", (project["brand_skill_id"],)) \
             if project and project.get("brand_skill_id") else None
         schema = prompts.TRIAGE_SCHEMA if mode == "full" else prompts.SUMMARY_SCHEMA
+        schema = prompts.with_focus(schema) if focus else schema
         triage = engine.generate_json(prompts.TRIAGE_SYSTEM,
-                                      prompts.triage_prompt(nb, project, kit, {**item, "content": item["content"][:TRIAGE_CHARS]}, mode),
+                                      prompts.triage_prompt(nb, project, kit, {**item, "content": item["content"][:TRIAGE_CHARS]}, mode, focus),
                                       schema, effort="low", timeout=240)
         if "relevance" in triage:
             triage["relevance"] = max(0, min(100, int(triage.get("relevance") or 0)))
         triage["mode"] = mode
         db.update("updates", update_id, status="ready", triage=triage, triaged_at=db.now(), error=None,
-                  updated_at=db.now())
+                  updated_at=db.now(), **(filtered if focus and triage.get("matches_focus") is False else {}))
     except QuotaError:  # not the item's fault: back in the queue until the pause ends
         db.update("updates", update_id, status="queued", updated_at=db.now())
         return

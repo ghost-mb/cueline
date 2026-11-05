@@ -48,7 +48,7 @@ export async function renderUpdates(root, projectId = "") {
       onclick: () => { location.hash = id ? `#/updates/${id}` : "#/updates"; },
     }, label))) : null;
   const stateTabs = el("div", { class: "segmented compact", role: "radiogroup", "aria-label": "Show" },
-    [["inbox", "Inbox"], ["added", "Added"], ["dismissed", "Dismissed"]].map(([k, label]) => el("button", {
+    [["inbox", "Inbox"], ["added", "Added"], ["dismissed", "Dismissed"], ["filtered", "Filtered out"]].map(([k, label]) => el("button", {
       class: view.state === k ? "active" : "", role: "radio", "aria-checked": String(view.state === k),
       onclick: () => { view.state = k; renderUpdates(root, view.project); },
     }, label)));
@@ -156,11 +156,11 @@ export async function checkNow(btn, body) {
 }
 
 function emptyUpdates() {
-  const msg = { inbox: "Nothing new right now.", added: "Nothing added yet.", dismissed: "Nothing dismissed." }[view.state];
+  const msg = { inbox: "Nothing new right now.", added: "Nothing added yet.", dismissed: "Nothing dismissed.", filtered: "Nothing filtered out." }[view.state];
   return el("div", { class: "empty-state big" }, icon(view.state === "inbox" ? "inbox" : "check"), el("strong", {}, msg),
     view.state === "inbox"
       ? "Follow a YouTube channel, playlist, search, blog, newsletter or podcast from any notebook: Add sources → Follow. New items land here every few hours."
-      : "");
+      : view.state === "filtered" ? "Give a live source a focus, and new items outside it land here instead of your inbox." : "");
 }
 
 // ---------- settings ----------
@@ -211,6 +211,7 @@ export function updateCard(item, { refresh, showNotebook = false, compact = fals
     body.append(el("div", { class: "feed-error" }, item.error || "Couldn't read this item.",
       el("button", { class: "btn ghost sm", onclick: async () => { await api(`/api/updates/${item.id}/retry`, { method: "POST" }); refresh(); } }, icon("refresh"), "Try again")));
   } else if (item.triage) {
+    if (item.state === "filtered") body.append(el("p", { class: "feed-reason" }, `Outside your focus: ${t.focus_reason || "no reason given"}`));
     if (t.relevance_reason && !compact) body.append(el("p", { class: "feed-reason" }, t.relevance_reason));
     body.append(el("div", { class: "feed-summary" }, renderMarkdown(t.summary || "")));
     if (t.key_points?.length && !compact) {
@@ -300,8 +301,8 @@ function actions(item, refresh) {
     };
     row.append(add);
   }
-  row.append(item.state === "dismissed"
-    ? el("button", { class: "btn ghost sm", onclick: () => setState("inbox") }, icon("inbox"), "Back to inbox")
-    : el("button", { class: "btn ghost sm", onclick: () => setState("dismissed") }, icon("eyeOff"), "Dismiss"));
+  row.append(item.state === "inbox"
+    ? el("button", { class: "btn ghost sm", onclick: () => setState("dismissed") }, icon("eyeOff"), "Dismiss")
+    : el("button", { class: "btn ghost sm", onclick: () => setState("inbox") }, icon("inbox"), "Back to inbox"));
   return row;
 }

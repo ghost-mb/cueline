@@ -273,6 +273,33 @@ async function refreshSize() {
   document.querySelector(".nb-size")?.replaceWith(sizeLine() || el("span", { class: "nb-size" }));
 }
 
+const FOCUS_EXAMPLE = "e.g. battery research, skip product reviews";
+
+// What this live source should let through. Saved on change; only new items are checked against it.
+function focusField(f) {
+  return el("label", { class: "field" }, "Focus",
+    el("input", { type: "text", maxlength: "300", value: f.focus || "", placeholder: FOCUS_EXAMPLE, onchange: async e => {
+      try {
+        f.focus = (await api(`/api/follows/${f.id}`, { method: "PATCH", body: { focus: e.target.value } })).focus;
+        toast(f.focus ? "Saved. New items outside this focus go to Filtered out." : "Focus removed.");
+      } catch (err) { toast(err.message); }
+    } }),
+    el("span", { class: "muted small", style: { display: "block", fontWeight: "400", marginTop: "4px" } },
+      "New items outside it go to Filtered out, and you can bring them back. Needs AI reading on."));
+}
+
+// The items this source's focus held back, loaded when opened.
+function filteredList(f) {
+  const box = el("div", { class: "inbox-list" });
+  return el("details", { class: "feed-points", ontoggle: async e => {
+    if (!e.target.open || box.childElementCount) return;
+    try {
+      const d = await api(`/api/updates?follow=${f.id}&state=filtered`);
+      box.replaceChildren(...d.items.map(i => updateCard(i, { compact: true, refresh: () => { delete inboxCache[f.id]; reload(["sources", "chat"]); } })));
+    } catch (err) { toast(err.message); }
+  } }, el("summary", {}, `${f.filtered_count} filtered out`), box);
+}
+
 function followRow(f) {
   const k = FOLLOW_KINDS[f.kind] || FOLLOW_KINDS.rss;
   const state = f.last_error ? el("span", { class: "badge bad", title: f.last_error }, "error")
@@ -323,6 +350,7 @@ function renderFollowInbox(body, id) {
       : f.last_checked_at ? `Checked ${timeAgo(f.last_checked_at)} · every few hours` : "Checking for the first time…"),
     el("div", { class: "follow-actions" }, checkBtn,
       el("button", { class: "btn ghost sm", onclick: () => openUpdatesSettings(() => reload(["sources"])) }, icon("settings"), "AI reading")),
+    focusField(f),
     switchRow("Add new items automatically", "Each new item becomes a source of this notebook, ready to use. Up to 10 a day.", f.auto_add, async on => {
       await api(`/api/follows/${f.id}`, { method: "PATCH", body: { auto_add: on } });
       toast(on ? "New items will be added as sources automatically." : "New items will wait in the inbox for you.");
@@ -339,6 +367,7 @@ function renderFollowInbox(body, id) {
       }) : "");
   const list = el("div", { class: "inbox-list" });
   body.append(list);
+  if (f.filtered_count) body.append(filteredList(f));
   // The cached list is painted right away (before swapPanel attaches the panel), so the scroll position can be kept.
   // A server answer is only used while this list is still on screen: an older render's answer must not repaint
   // or overwrite the cache.
@@ -705,10 +734,11 @@ function openAddSource() {
           const k = FOLLOW_KINDS[info.kind] || FOLLOW_KINDS.rss;
           const go = el("button", { class: "btn primary" }, el("span", { class: "live-dot" }), "Follow");
           let autoAdd = false;
+          const focus = el("input", { type: "text", maxlength: "300", placeholder: FOCUS_EXAMPLE });
           go.onclick = async () => {
             go.disabled = true; busy("Following…");
             try {
-              const f = await api(`/api/notebooks/${nb.id}/follows`, { method: "POST", body: { ...body(), auto_add: autoAdd } });
+              const f = await api(`/api/notebooks/${nb.id}/follows`, { method: "POST", body: { ...body(), auto_add: autoAdd, focus: focus.value } });
               m.close(); toast(autoAdd ? `Following ${f.title}. New items will be added as sources automatically.`
                 : `Following ${f.title}. Its newest items will appear in this notebook's inbox.`, 4500);
               sourceView = `follow:${f.id}`;
@@ -721,6 +751,7 @@ function openAddSource() {
             info.latest.length ? el("ul", { class: "fp-list" }, info.latest.map(x => el("li", {},
               x.thumbnail ? el("img", { src: x.thumbnail, alt: "", loading: "lazy" }) : el("span", { class: "fp-ph" }, icon(k.icon)),
               el("span", {}, x.title, el("small", {}, [x.author, x.published_at ? timeAgo(x.published_at) : null, ...mediaFacts(x)].filter(Boolean).join(" · ")))))) : el("p", { class: "muted small" }, "Nothing published yet."),
+            el("label", { class: "field" }, "Focus (optional)", focus),
             switchRow("Add new items automatically", "Off: new items wait in the inbox until you add them. Cueline checks every few hours.", false, on => (autoAdd = on)),
             el("div", { style: { display: "flex", justifyContent: "flex-end" } }, go)));
         } catch (e) { fail(e.message); }

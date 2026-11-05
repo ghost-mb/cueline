@@ -45,7 +45,8 @@ CREATE TABLE IF NOT EXISTS follows (
     id TEXT PRIMARY KEY, notebook_id TEXT NOT NULL REFERENCES notebooks(id) ON DELETE CASCADE,
     kind TEXT NOT NULL, url TEXT NOT NULL, feed_url TEXT NOT NULL, title TEXT NOT NULL, meta TEXT,
     enabled INTEGER NOT NULL DEFAULT 1, auto_add INTEGER NOT NULL DEFAULT 0, last_checked_at TEXT, last_error TEXT,
-    fail_count INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, transcribe_audio INTEGER NOT NULL DEFAULT 0
+    fail_count INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, transcribe_audio INTEGER NOT NULL DEFAULT 0,
+    focus TEXT
 );
 CREATE TABLE IF NOT EXISTS updates (
     id TEXT PRIMARY KEY, follow_id TEXT NOT NULL REFERENCES follows(id) ON DELETE CASCADE,
@@ -261,6 +262,7 @@ def follows(notebook_id: str) -> list[dict]:
     return query("""SELECT f.*,
                     (SELECT COUNT(*) FROM updates u WHERE u.follow_id = f.id AND u.state = 'inbox'
                        AND u.status != 'skipped') AS inbox_count,
+                    (SELECT COUNT(*) FROM updates u WHERE u.follow_id = f.id AND u.state = 'filtered') AS filtered_count,
                     (SELECT COUNT(*) FROM updates u WHERE u.follow_id = f.id AND u.status IN ('queued', 'processing')) AS busy_count
                     FROM follows f WHERE f.notebook_id = ? ORDER BY f.created_at""", (notebook_id,))
 

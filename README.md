@@ -107,7 +107,12 @@ hours **while Cueline is running**, and new items land in **Updates** with a sum
 three content ideas.
 
 - Add an item as a source, or dismiss it. Each live source has a switch to add new items automatically (10 a day at
-  most).
+  most). Items that clearly don't fit the notebook wait in the inbox instead.
+- **Give a source a focus** to choose what gets through, for example `battery research, skip product reviews`. New items
+  outside it go to **Filtered out** with the reason, and **Back to inbox** brings one back. Most are ruled out from their
+  title, so they use one small AI call instead of a transcript and a full read, and count as a fifth of an item toward
+  the daily limit. If in doubt, or if that call fails, the item is kept. With a focus, a new follow scans its 8 newest
+  items instead of 3.
 - A new follow starts with its 3 newest items, not the whole back catalogue. The AI reads 30 new items a day at most.
 - A source that fails 5 checks in a row pauses itself and tells you why. Network outages don't count.
 - YouTube channels have a "Transcribe videos without captions" switch (`audio` add-on).
@@ -239,6 +244,7 @@ the AI you picked (none if you use a local model), and Cueline fetches the video
 - **Citations:** the checker proves that a citation points to a real moment and that a quote is word for word. It can't
   prove the sentence is a fair reading of that moment, so click through before you publish.
 - **Live sources** are only checked while Cueline is running. On Linux, `scripts/cuelinectl` keeps it running.
+- **Focus** is the AI's judgement, so it can get one wrong. It needs AI reading on, and only applies to new items.
 - **File size:** audio up to 400 MB and 4 hours, other files up to 30 MB. Web pages and feeds up to 5 MB.
 - **Scanned PDFs:** up to 30 scanned pages per PDF are read (split longer ones). Handwriting and poor scans may come
   out garbled.
